@@ -3,16 +3,26 @@ import { Check } from "lucide-react"
 
 import { cn } from "@/lib/utils"
 
+export interface CheckboxProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 'onCheckedChange'> {
+  onCheckedChange?: (checked: boolean) => void;
+}
+
 const Checkbox = React.forwardRef<
   HTMLInputElement,
-  React.InputHTMLAttributes<HTMLInputElement>
->(({ className, ...props }, ref) => {
+  CheckboxProps
+>(({ className, onCheckedChange, onChange, ...props }, ref) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    onChange?.(e);
+    onCheckedChange?.(e.target.checked);
+  };
+
   return (
     <div className="relative inline-flex items-center">
       <input
         type="checkbox"
         className="peer sr-only"
         ref={ref}
+        onChange={handleChange}
         {...props}
       />
       <div
