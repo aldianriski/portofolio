@@ -20,9 +20,10 @@ interface ContactSectionProps {
 }
 
 const contactFormSchema = z.object({
-  name: z.string().min(2, 'Name must be at least 2 characters'),
-  email: z.string().email('Please enter a valid email'),
-  message: z.string().min(10, 'Message must be at least 10 characters'),
+  name: z.string().min(2, 'Name must be at least 2 characters').max(100, 'Name is too long'),
+  email: z.string().email('Please enter a valid email').max(255, 'Email is too long'),
+  message: z.string().min(10, 'Message must be at least 10 characters').max(2000, 'Message is too long (max 2000 characters)'),
+  website: z.string().optional(), // Honeypot field
 });
 
 type ContactFormData = z.infer<typeof contactFormSchema>;
@@ -67,8 +68,15 @@ export function ContactSection({ locale }: ContactSectionProps) {
         body: JSON.stringify({ ...data, locale }),
       });
 
+      const result = await response.json();
+
       if (!response.ok) {
-        throw new Error('Failed to send message');
+        if (response.status === 429) {
+          toast.error('Too many requests. Please try again in a few minutes.');
+        } else {
+          toast.error(result.error || 'Failed to send message');
+        }
+        return;
       }
 
       toast.success(t('form.success'));
@@ -139,6 +147,18 @@ export function ContactSection({ locale }: ContactSectionProps) {
                 </CardHeader>
                 <CardContent>
                   <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+                    {/* Honeypot field - hidden from users, visible to bots */}
+                    <div className="hidden" aria-hidden="true">
+                      <label htmlFor="website">Website</label>
+                      <Input
+                        id="website"
+                        type="text"
+                        tabIndex={-1}
+                        autoComplete="off"
+                        {...register('website')}
+                      />
+                    </div>
+
                     <div>
                       <Label htmlFor="name">{t('form.name')}</Label>
                       <Input
@@ -146,6 +166,7 @@ export function ContactSection({ locale }: ContactSectionProps) {
                         placeholder={t('form.name')}
                         {...register('name')}
                         disabled={isSubmitting}
+                        maxLength={100}
                       />
                       {errors.name && (
                         <p className="text-sm text-destructive mt-1">{errors.name.message}</p>
@@ -160,6 +181,7 @@ export function ContactSection({ locale }: ContactSectionProps) {
                         placeholder={t('form.email')}
                         {...register('email')}
                         disabled={isSubmitting}
+                        maxLength={255}
                       />
                       {errors.email && (
                         <p className="text-sm text-destructive mt-1">{errors.email.message}</p>
@@ -174,10 +196,16 @@ export function ContactSection({ locale }: ContactSectionProps) {
                         rows={5}
                         {...register('message')}
                         disabled={isSubmitting}
+                        maxLength={2000}
                       />
-                      {errors.message && (
-                        <p className="text-sm text-destructive mt-1">{errors.message.message}</p>
-                      )}
+                      <div className="flex justify-between items-center mt-1">
+                        {errors.message && (
+                          <p className="text-sm text-destructive">{errors.message.message}</p>
+                        )}
+                        <p className="text-xs text-muted-foreground ml-auto">
+                          Max 2000 characters
+                        </p>
+                      </div>
                     </div>
 
                     <Button type="submit" className="w-full" disabled={isSubmitting}>

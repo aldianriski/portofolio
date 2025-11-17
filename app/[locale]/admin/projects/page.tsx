@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Image from 'next/image';
 import { toast } from 'sonner';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/ui/components/ui/card';
 import { Button } from '@/ui/components/ui/button';
@@ -68,6 +69,8 @@ export default function ProjectsPage() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [formData, setFormData] = useState<ProjectFormData>(emptyForm);
   const [isSaving, setIsSaving] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [filterFeatured, setFilterFeatured] = useState<'all' | 'featured' | 'regular'>('all');
 
   useEffect(() => {
     loadProjects();
@@ -183,6 +186,23 @@ export default function ProjectsPage() {
     }
   };
 
+  // Filter and search projects
+  const filteredProjects = projects.filter(project => {
+    // Search filter
+    const matchesSearch = searchQuery === '' ||
+      project.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      project.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      project.role.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      project.tech_stack.some(tech => tech.toLowerCase().includes(searchQuery.toLowerCase()));
+
+    // Featured filter
+    const matchesFeatured = filterFeatured === 'all' ||
+      (filterFeatured === 'featured' && project.featured) ||
+      (filterFeatured === 'regular' && !project.featured);
+
+    return matchesSearch && matchesFeatured;
+  });
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -241,38 +261,85 @@ export default function ProjectsPage() {
         </Card>
       </div>
 
+      {/* Search and Filter */}
+      <div className="flex flex-col md:flex-row gap-4">
+        <div className="flex-1">
+          <Input
+            placeholder="Search projects by title, description, role, or tech stack..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full"
+          />
+        </div>
+        <div className="flex gap-2">
+          <Button
+            variant={filterFeatured === 'all' ? 'default' : 'outline'}
+            onClick={() => setFilterFeatured('all')}
+            size="sm"
+          >
+            All ({projects.length})
+          </Button>
+          <Button
+            variant={filterFeatured === 'featured' ? 'default' : 'outline'}
+            onClick={() => setFilterFeatured('featured')}
+            size="sm"
+          >
+            Featured ({projects.filter(p => p.featured).length})
+          </Button>
+          <Button
+            variant={filterFeatured === 'regular' ? 'default' : 'outline'}
+            onClick={() => setFilterFeatured('regular')}
+            size="sm"
+          >
+            Regular ({projects.filter(p => !p.featured).length})
+          </Button>
+        </div>
+      </div>
+
       {/* Projects List */}
       {isLoading ? (
         <div className="flex items-center justify-center min-h-[400px]">
           <Loader2 className="w-8 h-8 animate-spin text-primary" />
         </div>
-      ) : projects.length === 0 ? (
+      ) : filteredProjects.length === 0 ? (
         <Card>
           <CardContent className="py-12 text-center">
             <ImageIcon className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
-            <h3 className="text-lg font-semibold mb-2">No projects yet</h3>
+            <h3 className="text-lg font-semibold mb-2">
+              {searchQuery || filterFeatured !== 'all' ? 'No projects found' : 'No projects yet'}
+            </h3>
             <p className="text-muted-foreground mb-4">
-              Create your first project to showcase your work
+              {searchQuery || filterFeatured !== 'all'
+                ? 'Try adjusting your search or filters'
+                : 'Create your first project to showcase your work'}
             </p>
-            <Button onClick={handleCreate}>
-              <Plus className="w-4 h-4 mr-2" />
-              Add Project
-            </Button>
+            {searchQuery || filterFeatured !== 'all' ? (
+              <Button onClick={() => { setSearchQuery(''); setFilterFeatured('all'); }} variant="outline">
+                Clear Filters
+              </Button>
+            ) : (
+              <Button onClick={handleCreate}>
+                <Plus className="w-4 h-4 mr-2" />
+                Add Project
+              </Button>
+            )}
           </CardContent>
         </Card>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {projects.map((project) => (
+          {filteredProjects.map((project) => (
             <Card key={project.id} className="overflow-hidden">
               {project.image_url && (
                 <div className="aspect-video bg-muted relative overflow-hidden">
-                  <img
+                  <Image
                     src={project.image_url}
                     alt={project.title}
-                    className="object-cover w-full h-full"
+                    fill
+                    className="object-cover"
+                    sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                   />
                   {project.featured && (
-                    <Badge className="absolute top-2 right-2">Featured</Badge>
+                    <Badge className="absolute top-2 right-2 z-10">Featured</Badge>
                   )}
                 </div>
               )}
