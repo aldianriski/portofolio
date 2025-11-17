@@ -47,10 +47,10 @@ export async function POST(request: NextRequest) {
 
     const response = NextResponse.json({ success: true });
     return addRateLimitHeaders(response, request);
-  } catch (error: any) {
+  } catch (error) {
     console.error('Error reordering testimonials:', error);
     return NextResponse.json(
-      { error: error.message || 'Internal server error' },
+      { error: error instanceof Error ? error.message : 'Internal server error' },
       { status: 500 }
     );
   }

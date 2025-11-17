@@ -1,6 +1,8 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+export const dynamic = 'force-dynamic';
+
+import { useEffect, useState, useCallback } from 'react';
 import { toast } from 'sonner';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/ui/components/ui/card';
 import { Button } from '@/ui/components/ui/button';
@@ -64,11 +66,7 @@ export default function ExperiencePage() {
   const [reorderedExperience, setReorderedExperience] = useState<Experience[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
 
-  useEffect(() => {
-    loadExperiences();
-  }, [locale]);
-
-  const loadExperiences = async () => {
+  const loadExperiences = useCallback(async () => {
     setIsLoading(true);
     try {
       const { data, error } = await supabase
@@ -85,7 +83,11 @@ export default function ExperiencePage() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [locale]);
+
+  useEffect(() => {
+    loadExperiences();
+  }, [loadExperiences]);
 
   const handleEdit = (experience: Experience) => {
     setEditingId(experience.id);
@@ -156,9 +158,9 @@ export default function ExperiencePage() {
       setFormData(emptyForm);
       setEditingId(null);
       loadExperiences();
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error saving experience:', error);
-      toast.error(error.message || 'Failed to save experience');
+      toast.error(error instanceof Error ? error.message : 'Failed to save experience');
     } finally {
       setIsSaving(false);
     }
@@ -351,7 +353,7 @@ export default function ExperiencePage() {
           <CardHeader>
             <CardTitle>Reorder Experiences</CardTitle>
             <CardDescription>
-              Drag and drop to reorder experiences. Click "Save Order" when done.
+              Drag and drop to reorder experiences. Click &quot;Save Order&quot; when done.
             </CardDescription>
           </CardHeader>
           <CardContent>

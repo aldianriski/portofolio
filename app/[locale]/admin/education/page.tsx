@@ -1,6 +1,8 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+export const dynamic = 'force-dynamic';
+
+import { useEffect, useState, useCallback } from 'react';
 import { toast } from 'sonner';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/ui/components/ui/card';
 import { Button } from '@/ui/components/ui/button';
@@ -60,11 +62,7 @@ export default function EducationPage() {
   const [isReordering, setIsReordering] = useState(false);
   const [reorderedEducation, setReorderedEducation] = useState<Education[]>([]);
 
-  useEffect(() => {
-    loadEducations();
-  }, [locale]);
-
-  const loadEducations = async () => {
+  const loadEducations = useCallback(async () => {
     setIsLoading(true);
     try {
       const { data, error } = await supabase
@@ -81,7 +79,11 @@ export default function EducationPage() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [locale]);
+
+  useEffect(() => {
+    loadEducations();
+  }, [loadEducations]);
 
   const handleEdit = (education: Education) => {
     setEditingId(education.id);
@@ -144,9 +146,9 @@ export default function EducationPage() {
       setFormData(emptyForm);
       setEditingId(null);
       loadEducations();
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error saving education:', error);
-      toast.error(error.message || 'Failed to save education');
+      toast.error(error instanceof Error ? error.message : 'Failed to save education');
     } finally {
       setIsSaving(false);
     }
@@ -332,7 +334,7 @@ export default function EducationPage() {
           <CardHeader>
             <CardTitle>Reorder Education</CardTitle>
             <CardDescription>
-              Drag and drop to reorder education entries. Click "Save Order" when done.
+              Drag and drop to reorder education entries. Click &quot;Save Order&quot; when done.
             </CardDescription>
           </CardHeader>
           <CardContent>

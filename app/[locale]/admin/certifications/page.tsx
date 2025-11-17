@@ -1,6 +1,8 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+export const dynamic = 'force-dynamic';
+
+import { useEffect, useState, useCallback } from 'react';
 import { toast } from 'sonner';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/ui/components/ui/card';
 import { Button } from '@/ui/components/ui/button';
@@ -56,11 +58,7 @@ export default function CertificationsPage() {
   const [isReordering, setIsReordering] = useState(false);
   const [reorderedCertifications, setReorderedCertifications] = useState<Certification[]>([]);
 
-  useEffect(() => {
-    loadCertifications();
-  }, [locale]);
-
-  const loadCertifications = async () => {
+  const loadCertifications = useCallback(async () => {
     setIsLoading(true);
     try {
       const { data, error } = await supabase
@@ -77,7 +75,11 @@ export default function CertificationsPage() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [locale]);
+
+  useEffect(() => {
+    loadCertifications();
+  }, [loadCertifications]);
 
   const handleEdit = (certification: Certification) => {
     setEditingId(certification.id);
@@ -138,9 +140,9 @@ export default function CertificationsPage() {
       setFormData(emptyForm);
       setEditingId(null);
       loadCertifications();
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error saving certification:', error);
-      toast.error(error.message || 'Failed to save certification');
+      toast.error(error instanceof Error ? error.message : 'Failed to save certification');
     } finally {
       setIsSaving(false);
     }
@@ -353,7 +355,7 @@ export default function CertificationsPage() {
           <CardHeader>
             <CardTitle>Reorder Certifications</CardTitle>
             <CardDescription>
-              Drag and drop to reorder certifications. Click "Save Order" when done.
+              Drag and drop to reorder certifications. Click &quot;Save Order&quot; when done.
             </CardDescription>
           </CardHeader>
           <CardContent>

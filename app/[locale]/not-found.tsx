@@ -2,6 +2,8 @@ import Link from 'next/link';
 import { Button } from '@/ui/components/ui/button';
 import { ArrowLeft, Home } from 'lucide-react';
 
+export const dynamic = 'force-dynamic';
+
 export default function NotFound() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-background to-primary/5 px-4">
@@ -18,7 +20,7 @@ export default function NotFound() {
         <div className="space-y-2">
           <h2 className="text-3xl font-bold">Page Not Found</h2>
           <p className="text-muted-foreground">
-            Sorry, the page you're looking for doesn't exist or has been moved.
+            Sorry, the page you&apos;re looking for doesn&apos;t exist or has been moved.
           </p>
         </div>
 

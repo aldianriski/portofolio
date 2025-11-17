@@ -1,12 +1,13 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+export const dynamic = 'force-dynamic';
+
+import { useEffect, useState, useCallback } from 'react';
 import { toast } from 'sonner';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/ui/components/ui/card';
 import { Button } from '@/ui/components/ui/button';
 import { Badge } from '@/ui/components/ui/badge';
 import { Loader2, Mail, MailOpen, Trash2, RefreshCw } from 'lucide-react';
-import { supabaseAdmin } from '@/infrastructure/supabase/server';
 import { supabase } from '@/infrastructure/supabase/client';
 
 interface ContactMessage {
@@ -24,11 +25,7 @@ export default function MessagesPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [filter, setFilter] = useState<'all' | 'unread' | 'read'>('all');
 
-  useEffect(() => {
-    loadMessages();
-  }, [filter]);
-
-  const loadMessages = async () => {
+  const loadMessages = useCallback(async () => {
     setIsLoading(true);
     try {
       let query = supabase
@@ -52,7 +49,11 @@ export default function MessagesPage() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [filter]);
+
+  useEffect(() => {
+    loadMessages();
+  }, [loadMessages]);
 
   const markAsRead = async (id: string, currentStatus: boolean) => {
     try {

@@ -53,7 +53,7 @@ export function verifyAdminPassword(password: string): boolean {
  * Verify authentication for API routes
  * Returns error response if not authenticated
  */
-export async function verifyAuth(request: NextRequest): Promise<NextResponse | null> {
+export async function verifyAuth(_request: NextRequest): Promise<NextResponse | null> {
   const isAuthenticated = await checkAdminAuth();
 
   if (!isAuthenticated) {
