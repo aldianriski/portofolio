@@ -1,0 +1,79 @@
+{
+  "hero": {
+    "greeting": "Hi, I'm",
+    "name": "M. ALDIAN RIZKI LAMANI",
+    "title": "Fullstack Developer & Tech Lead",
+    "tagline": "Leading teams to ship scalable systems in the AI era.",
+    "description": "Experienced fullstack developer specializing in building scalable web applications and leading engineering teams to deliver high-quality solutions.",
+    "cta": {
+      "viewProjects": "View Projects",
+      "contact": "Get in Touch"
+    }
+  },
+  "expertise": {
+    "title": "Key Expertise",
+    "fullstack": {
+      "title": "Fullstack Developer",
+      "description": "Build frontend and backend systems, scalable architecture"
+    },
+    "techlead": {
+      "title": "Tech Lead",
+      "description": "Lead teams, design systems, ensure quality & roadmap alignment"
+    },
+    "ai": {
+      "title": "Experience with AI",
+      "description": "Utilize ChatGPT & Claude for code acceleration and architectural exploration"
+    }
+  },
+  "skills": {
+    "title": "Skills & Technologies",
+    "hardSkills": "Technical Skills",
+    "softSkills": "Soft Skills"
+  },
+  "projects": {
+    "title": "Featured Projects",
+    "viewAll": "View All Projects",
+    "viewDetail": "View Details"
+  },
+  "experience": {
+    "title": "Professional Experience",
+    "present": "Present"
+  },
+  "education": {
+    "title": "Education & Organizations"
+  },
+  "testimonials": {
+    "title": "What People Say"
+  },
+  "certifications": {
+    "title": "Certifications"
+  },
+  "contact": {
+    "title": "Let's Work Together",
+    "subtitle": "Have a project in mind? Let's discuss how I can help.",
+    "form": {
+      "name": "Your Name",
+      "email": "Your Email",
+      "message": "Your Message",
+      "submit": "Send Message",
+      "sending": "Sending...",
+      "success": "Message sent successfully!",
+      "error": "Failed to send message. Please try again."
+    },
+    "whatsapp": "Chat on WhatsApp",
+    "status": {
+      "available": "Available for work",
+      "busy": "Currently busy",
+      "unavailable": "Not available"
+    }
+  },
+  "nav": {
+    "home": "Home",
+    "projects": "Projects",
+    "experience": "Experience",
+    "contact": "Contact"
+  },
+  "footer": {
+    "rights": "All rights reserved"
+  }
+}

@@ -1,0 +1,79 @@
+{
+  "hero": {
+    "greeting": "Halo, Saya",
+    "name": "M. ALDIAN RIZKI LAMANI",
+    "title": "Fullstack Developer & Tech Lead",
+    "tagline": "Memimpin tim untuk menghadirkan sistem yang scalable di era AI.",
+    "description": "Fullstack developer berpengalaman yang berspesialisasi dalam membangun aplikasi web scalable dan memimpin tim engineering untuk menghadirkan solusi berkualitas tinggi.",
+    "cta": {
+      "viewProjects": "Lihat Proyek",
+      "contact": "Hubungi Saya"
+    }
+  },
+  "expertise": {
+    "title": "Keahlian Utama",
+    "fullstack": {
+      "title": "Fullstack Developer",
+      "description": "Membangun sistem frontend dan backend, arsitektur yang scalable"
+    },
+    "techlead": {
+      "title": "Tech Lead",
+      "description": "Memimpin tim, merancang sistem, memastikan kualitas & keselarasan roadmap"
+    },
+    "ai": {
+      "title": "Pengalaman dengan AI",
+      "description": "Memanfaatkan ChatGPT & Claude untuk akselerasi kode dan eksplorasi arsitektur"
+    }
+  },
+  "skills": {
+    "title": "Keahlian & Teknologi",
+    "hardSkills": "Keahlian Teknis",
+    "softSkills": "Soft Skills"
+  },
+  "projects": {
+    "title": "Proyek Unggulan",
+    "viewAll": "Lihat Semua Proyek",
+    "viewDetail": "Lihat Detail"
+  },
+  "experience": {
+    "title": "Pengalaman Profesional",
+    "present": "Sekarang"
+  },
+  "education": {
+    "title": "Pendidikan & Organisasi"
+  },
+  "testimonials": {
+    "title": "Testimoni"
+  },
+  "certifications": {
+    "title": "Sertifikasi"
+  },
+  "contact": {
+    "title": "Mari Bekerja Sama",
+    "subtitle": "Punya proyek? Mari diskusikan bagaimana saya bisa membantu.",
+    "form": {
+      "name": "Nama Anda",
+      "email": "Email Anda",
+      "message": "Pesan Anda",
+      "submit": "Kirim Pesan",
+      "sending": "Mengirim...",
+      "success": "Pesan berhasil dikirim!",
+      "error": "Gagal mengirim pesan. Silakan coba lagi."
+    },
+    "whatsapp": "Chat di WhatsApp",
+    "status": {
+      "available": "Tersedia untuk bekerja",
+      "busy": "Sedang sibuk",
+      "unavailable": "Tidak tersedia"
+    }
+  },
+  "nav": {
+    "home": "Beranda",
+    "projects": "Proyek",
+    "experience": "Pengalaman",
+    "contact": "Kontak"
+  },
+  "footer": {
+    "rights": "Hak cipta dilindungi"
+  }
+}
