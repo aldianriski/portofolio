@@ -1,15 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { env } from '@/lib/env';
-import { verifyAuth } from '@/lib/admin-auth';
+import { protectAdminRoute, addRateLimitHeaders } from '@/lib/admin-middleware';
 
 export async function POST(request: NextRequest) {
   try {
-    // Verify admin authentication
-    const authError = await verifyAuth(request);
-    if (authError) {
-      return authError;
-    }
+    // Apply security middleware (auth + CSRF + rate limit)
+    const middlewareResponse = await protectAdminRoute(request);
+    if (middlewareResponse) return middlewareResponse;
 
     const body = await request.json();
     const { items } = body;
@@ -47,7 +45,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    return NextResponse.json({ success: true });
+    const response = NextResponse.json({ success: true });
+    return addRateLimitHeaders(response, request);
   } catch (error: any) {
     console.error('Error reordering experience:', error);
     return NextResponse.json(
