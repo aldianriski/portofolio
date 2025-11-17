@@ -7,6 +7,7 @@ import Image from 'next/image';
 import { Button } from '@/ui/components/ui/button';
 import { ArrowRight, Mail } from 'lucide-react';
 import type { HeroSettings } from '@/domain/settings/types';
+import { DownloadResumeButton } from '@/ui/components/resume/download-resume-button';
 
 interface HeroSectionProps {
   locale: string;
@@ -218,6 +219,11 @@ export function HeroSection({ locale }: HeroSectionProps) {
               <Mail className="w-4 h-4 mr-2 transition-transform group-hover:scale-110" />
               {t('cta.contact')}
             </Button>
+
+            <DownloadResumeButton
+              variant="secondary"
+              size="lg"
+            />
           </motion.div>
 
           {/* Scroll indicator */}
