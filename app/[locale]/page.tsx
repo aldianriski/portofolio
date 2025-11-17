@@ -3,6 +3,7 @@ import { HeroSection } from '@/ui/sections/hero-section';
 import { ExpertiseSection } from '@/ui/sections/expertise-section';
 import { SkillsSection } from '@/ui/sections/skills-section';
 import { ProjectsSection } from '@/ui/sections/projects-section';
+import { ExperienceSection } from '@/ui/sections/experience-section';
 
 export default async function HomePage({
   params,
@@ -18,6 +19,7 @@ export default async function HomePage({
       <ExpertiseSection locale={locale} />
       <SkillsSection locale={locale} />
       <ProjectsSection locale={locale} />
+      <ExperienceSection locale={locale} />
 
       {/* More sections will be added here */}
       <div className="container mx-auto px-4 py-16">
