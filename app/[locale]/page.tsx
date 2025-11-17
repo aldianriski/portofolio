@@ -5,6 +5,8 @@ import { SkillsSection } from '@/ui/sections/skills-section';
 import { ProjectsSection } from '@/ui/sections/projects-section';
 import { ExperienceSection } from '@/ui/sections/experience-section';
 import { EducationSection } from '@/ui/sections/education-section';
+import { TestimonialsSection } from '@/ui/sections/testimonials-section';
+import { CertificationsSection } from '@/ui/sections/certifications-section';
 
 export default async function HomePage({
   params,
@@ -22,6 +24,8 @@ export default async function HomePage({
       <ProjectsSection locale={locale} />
       <ExperienceSection locale={locale} />
       <EducationSection locale={locale} />
+      <TestimonialsSection locale={locale} />
+      <CertificationsSection locale={locale} />
 
       {/* More sections will be added here */}
       <div className="container mx-auto px-4 py-16">
