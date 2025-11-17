@@ -6,6 +6,7 @@ import { motion } from 'framer-motion';
 import { Card, CardContent, CardHeader, CardTitle } from '@/ui/components/ui/card';
 import { Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer, Tooltip } from 'recharts';
 import type { SkillsByCategory } from '@/domain/skills/types';
+import { SkillsSectionSkeleton } from '@/ui/components/sections/skeletons';
 
 interface SkillsSectionProps {
   locale: string;
@@ -14,12 +15,19 @@ interface SkillsSectionProps {
 export function SkillsSection({ locale }: SkillsSectionProps) {
   const t = useTranslations('skills');
   const [skills, setSkills] = useState<SkillsByCategory | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     fetch(`/api/skills?locale=${locale}`)
       .then(res => res.json())
-      .then(data => setSkills(data))
-      .catch(err => console.error('Error fetching skills:', err));
+      .then(data => {
+        setSkills(data);
+        setIsLoading(false);
+      })
+      .catch(err => {
+        console.error('Error fetching skills:', err);
+        setIsLoading(false);
+      });
   }, [locale]);
 
   const containerVariants = {
@@ -78,10 +86,15 @@ export function SkillsSection({ locale }: SkillsSectionProps) {
           <div className="w-20 h-1 bg-primary mx-auto rounded-full" />
         </motion.div>
 
-        <div className="max-w-7xl mx-auto">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-12">
-            {/* Hard Skills */}
-            <motion.div
+        {isLoading ? (
+          <div className="max-w-7xl mx-auto">
+            <SkillsSectionSkeleton />
+          </div>
+        ) : (
+          <div className="max-w-7xl mx-auto">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-12">
+              {/* Hard Skills */}
+              <motion.div
               initial={{ opacity: 0, x: -30 }}
               whileInView={{ opacity: 1, x: 0 }}
               viewport={{ once: true }}
@@ -175,8 +188,9 @@ export function SkillsSection({ locale }: SkillsSectionProps) {
                 </CardContent>
               </Card>
             </motion.div>
+            </div>
           </div>
-        </div>
+        )}
       </div>
     </section>
   );

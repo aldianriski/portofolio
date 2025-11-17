@@ -7,8 +7,9 @@ import { Button } from '@/ui/components/ui/button';
 import { Input } from '@/ui/components/ui/input';
 import { Label } from '@/ui/components/ui/label';
 import { Badge } from '@/ui/components/ui/badge';
-import { Loader2, Plus, Edit, Trash2, Award, Code, Users } from 'lucide-react';
+import { Loader2, Plus, Edit, Trash2, Award, Code, Users, ArrowUpDown, Save, X } from 'lucide-react';
 import { supabase } from '@/infrastructure/supabase/client';
+import { SortableList } from '@/ui/components/admin/sortable-list';
 
 interface Skill {
   id: string;
@@ -56,11 +57,14 @@ export default function SkillsPage() {
   const [skills, setSkills] = useState<Skill[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [locale, setLocale] = useState<'en' | 'id'>('en');
+  const [searchQuery, setSearchQuery] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<'all' | 'hard' | 'soft'>('all');
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [formData, setFormData] = useState<SkillFormData>(emptyForm);
   const [isSaving, setIsSaving] = useState(false);
+  const [isReordering, setIsReordering] = useState(false);
+  const [reorderedSkills, setReorderedSkills] = useState<Skill[]>([]);
 
   useEffect(() => {
     loadSkills();
@@ -163,9 +167,61 @@ export default function SkillsPage() {
     }
   };
 
-  const filteredSkills = skills.filter(skill =>
-    categoryFilter === 'all' || skill.category === categoryFilter
-  );
+  const handleStartReorder = () => {
+    setIsReordering(true);
+    setReorderedSkills([...skills]);
+  };
+
+  const handleCancelReorder = () => {
+    setIsReordering(false);
+    setReorderedSkills([]);
+  };
+
+  const handleReorder = (newItems: Skill[]) => {
+    setReorderedSkills(newItems);
+  };
+
+  const handleSaveOrder = async () => {
+    setIsSaving(true);
+    try {
+      const response = await fetch('/api/skills/reorder', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          items: reorderedSkills.map((s) => ({
+            id: s.id,
+            order_index: s.order_index,
+          })),
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to save order');
+      }
+
+      toast.success('Skills order saved successfully');
+      setIsReordering(false);
+      await loadSkills();
+    } catch (error) {
+      console.error('Error saving order:', error);
+      toast.error('Failed to save order');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const filteredSkills = skills.filter(skill => {
+    const matchesSearch = searchQuery === '' ||
+      skill.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      skill.subcategory.toLowerCase().includes(searchQuery.toLowerCase());
+
+    const matchesCategory = categoryFilter === 'all' ||
+      skill.category === categoryFilter;
+
+    return matchesSearch && matchesCategory;
+  });
 
   const hardSkills = skills.filter(s => s.category === 'hard');
   const softSkills = skills.filter(s => s.category === 'soft');
@@ -186,6 +242,7 @@ export default function SkillsPage() {
               variant={locale === 'en' ? 'default' : 'ghost'}
               size="sm"
               onClick={() => setLocale('en')}
+              disabled={isReordering}
             >
               EN
             </Button>
@@ -193,13 +250,72 @@ export default function SkillsPage() {
               variant={locale === 'id' ? 'default' : 'ghost'}
               size="sm"
               onClick={() => setLocale('id')}
+              disabled={isReordering}
             >
               ID
             </Button>
           </div>
-          <Button onClick={handleCreate} className="gap-2">
-            <Plus className="w-4 h-4" />
-            Add Skill
+          {!isReordering ? (
+            <>
+              <Button onClick={handleStartReorder} variant="outline" className="gap-2">
+                <ArrowUpDown className="w-4 h-4" />
+                Reorder
+              </Button>
+              <Button onClick={handleCreate} className="gap-2">
+                <Plus className="w-4 h-4" />
+                Add Skill
+              </Button>
+            </>
+          ) : (
+            <>
+              <Button onClick={handleCancelReorder} variant="outline" className="gap-2">
+                <X className="w-4 h-4" />
+                Cancel
+              </Button>
+              <Button onClick={handleSaveOrder} disabled={isSaving} className="gap-2">
+                {isSaving ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Save className="w-4 h-4" />
+                )}
+                Save Order
+              </Button>
+            </>
+          )}
+        </div>
+      </div>
+
+      {/* Search and Filter */}
+      <div className="flex flex-col md:flex-row gap-4">
+        <div className="flex-1">
+          <Input
+            placeholder="Search skills by name or subcategory..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full"
+          />
+        </div>
+        <div className="flex gap-2">
+          <Button
+            variant={categoryFilter === 'all' ? 'default' : 'outline'}
+            onClick={() => setCategoryFilter('all')}
+            size="sm"
+          >
+            All ({skills.length})
+          </Button>
+          <Button
+            variant={categoryFilter === 'hard' ? 'default' : 'outline'}
+            onClick={() => setCategoryFilter('hard')}
+            size="sm"
+          >
+            Hard Skills ({skills.filter(s => s.category === 'hard').length})
+          </Button>
+          <Button
+            variant={categoryFilter === 'soft' ? 'default' : 'outline'}
+            onClick={() => setCategoryFilter('soft')}
+            size="sm"
+          >
+            Soft Skills ({skills.filter(s => s.category === 'soft').length})
           </Button>
         </div>
       </div>
@@ -226,49 +342,64 @@ export default function SkillsPage() {
         </Card>
       </div>
 
-      {/* Category Filter */}
-      <div className="flex gap-2">
-        <Button
-          variant={categoryFilter === 'all' ? 'default' : 'outline'}
-          onClick={() => setCategoryFilter('all')}
-        >
-          All ({skills.length})
-        </Button>
-        <Button
-          variant={categoryFilter === 'hard' ? 'default' : 'outline'}
-          onClick={() => setCategoryFilter('hard')}
-          className="gap-2"
-        >
-          <Code className="w-4 h-4" />
-          Hard Skills ({hardSkills.length})
-        </Button>
-        <Button
-          variant={categoryFilter === 'soft' ? 'default' : 'outline'}
-          onClick={() => setCategoryFilter('soft')}
-          className="gap-2"
-        >
-          <Users className="w-4 h-4" />
-          Soft Skills ({softSkills.length})
-        </Button>
-      </div>
-
       {/* Skills List */}
       {isLoading ? (
         <div className="flex items-center justify-center min-h-[400px]">
           <Loader2 className="w-8 h-8 animate-spin text-primary" />
         </div>
+      ) : isReordering ? (
+        <Card>
+          <CardHeader>
+            <CardTitle>Reorder Skills</CardTitle>
+            <CardDescription>
+              Drag and drop to reorder skills. Click "Save Order" when done.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <SortableList
+              items={reorderedSkills}
+              onReorder={handleReorder}
+              renderItem={(skill) => (
+                <Card>
+                  <CardHeader className="p-4">
+                    <div className="flex items-center gap-4">
+                      <div className="flex-1 min-w-0">
+                        <CardTitle className="text-base truncate">{skill.name}</CardTitle>
+                        <CardDescription className="truncate">{skill.category} - {skill.subcategory}</CardDescription>
+                      </div>
+                      <div className="flex items-center gap-2 shrink-0">
+                        <Badge variant="outline">Proficiency: {skill.proficiency}%</Badge>
+                        <Badge variant="outline">#{skill.order_index}</Badge>
+                      </div>
+                    </div>
+                  </CardHeader>
+                </Card>
+              )}
+            />
+          </CardContent>
+        </Card>
       ) : filteredSkills.length === 0 ? (
         <Card>
           <CardContent className="py-12 text-center">
             <Award className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
-            <h3 className="text-lg font-semibold mb-2">No skills yet</h3>
+            <h3 className="text-lg font-semibold mb-2">
+              {searchQuery || categoryFilter !== 'all' ? 'No skills found' : 'No skills yet'}
+            </h3>
             <p className="text-muted-foreground mb-4">
-              Add your first skill to showcase your expertise
+              {searchQuery || categoryFilter !== 'all'
+                ? 'Try adjusting your search or filters'
+                : 'Add your first skill'}
             </p>
-            <Button onClick={handleCreate}>
-              <Plus className="w-4 h-4 mr-2" />
-              Add Skill
-            </Button>
+            {searchQuery || categoryFilter !== 'all' ? (
+              <Button onClick={() => { setSearchQuery(''); setCategoryFilter('all'); }} variant="outline">
+                Clear Filters
+              </Button>
+            ) : (
+              <Button onClick={handleCreate}>
+                <Plus className="w-4 h-4 mr-2" />
+                Add Skill
+              </Button>
+            )}
           </CardContent>
         </Card>
       ) : (

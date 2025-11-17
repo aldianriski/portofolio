@@ -9,8 +9,9 @@ import { Label } from '@/ui/components/ui/label';
 import { Textarea } from '@/ui/components/ui/textarea';
 import { Switch } from '@/ui/components/ui/switch';
 import { Badge } from '@/ui/components/ui/badge';
-import { Loader2, Plus, Edit, Trash2, Briefcase, MapPin, Calendar } from 'lucide-react';
+import { Loader2, Plus, Edit, Trash2, Briefcase, MapPin, Calendar, ArrowUpDown, Save, X } from 'lucide-react';
 import { supabase } from '@/infrastructure/supabase/client';
+import { SortableList } from '@/ui/components/admin/sortable-list';
 
 interface Experience {
   id: string;
@@ -59,6 +60,9 @@ export default function ExperiencePage() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [formData, setFormData] = useState<ExperienceFormData>(emptyForm);
   const [isSaving, setIsSaving] = useState(false);
+  const [isReordering, setIsReordering] = useState(false);
+  const [reorderedExperience, setReorderedExperience] = useState<Experience[]>([]);
+  const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
     loadExperiences();
@@ -178,6 +182,51 @@ export default function ExperiencePage() {
     }
   };
 
+  const handleStartReorder = () => {
+    setIsReordering(true);
+    setReorderedExperience([...experiences]);
+  };
+
+  const handleCancelReorder = () => {
+    setIsReordering(false);
+    setReorderedExperience([]);
+  };
+
+  const handleReorder = (newItems: Experience[]) => {
+    setReorderedExperience(newItems);
+  };
+
+  const handleSaveOrder = async () => {
+    setIsSaving(true);
+    try {
+      const response = await fetch('/api/experience/reorder', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          items: reorderedExperience.map((e) => ({
+            id: e.id,
+            order_index: e.order_index,
+          })),
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to save order');
+      }
+
+      toast.success('Experience order saved successfully');
+      setIsReordering(false);
+      await loadExperiences();
+    } catch (error) {
+      console.error('Error saving order:', error);
+      toast.error('Failed to save order');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   const formatDate = (dateString: string | null) => {
     if (!dateString) return 'Present';
     return new Date(dateString).toLocaleDateString('en-US', {
@@ -185,6 +234,17 @@ export default function ExperiencePage() {
       month: 'short',
     });
   };
+
+  // Filter experiences based on search query
+  const filteredExperience = experiences.filter(exp => {
+    const matchesSearch = searchQuery === '' ||
+      exp.company.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      exp.position.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (exp.description && exp.description.toLowerCase().includes(searchQuery.toLowerCase())) ||
+      (exp.location && exp.location.toLowerCase().includes(searchQuery.toLowerCase()));
+
+    return matchesSearch;
+  });
 
   return (
     <div className="space-y-6">
@@ -202,6 +262,7 @@ export default function ExperiencePage() {
               variant={locale === 'en' ? 'default' : 'ghost'}
               size="sm"
               onClick={() => setLocale('en')}
+              disabled={isReordering}
             >
               EN
             </Button>
@@ -209,14 +270,38 @@ export default function ExperiencePage() {
               variant={locale === 'id' ? 'default' : 'ghost'}
               size="sm"
               onClick={() => setLocale('id')}
+              disabled={isReordering}
             >
               ID
             </Button>
           </div>
-          <Button onClick={handleCreate} className="gap-2">
-            <Plus className="w-4 h-4" />
-            Add Experience
-          </Button>
+          {!isReordering ? (
+            <>
+              <Button onClick={handleStartReorder} variant="outline" className="gap-2">
+                <ArrowUpDown className="w-4 h-4" />
+                Reorder
+              </Button>
+              <Button onClick={handleCreate} className="gap-2">
+                <Plus className="w-4 h-4" />
+                Add Experience
+              </Button>
+            </>
+          ) : (
+            <>
+              <Button onClick={handleCancelReorder} variant="outline" className="gap-2">
+                <X className="w-4 h-4" />
+                Cancel
+              </Button>
+              <Button onClick={handleSaveOrder} disabled={isSaving} className="gap-2">
+                {isSaving ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Save className="w-4 h-4" />
+                )}
+                Save Order
+              </Button>
+            </>
+          )}
         </div>
       </div>
 
@@ -244,28 +329,89 @@ export default function ExperiencePage() {
         </Card>
       </div>
 
+      {/* Search */}
+      <div className="flex flex-col md:flex-row gap-4">
+        <div className="flex-1">
+          <Input
+            placeholder="Search experience by company, position, location..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full"
+          />
+        </div>
+      </div>
+
       {/* Experience List */}
       {isLoading ? (
         <div className="flex items-center justify-center min-h-[400px]">
           <Loader2 className="w-8 h-8 animate-spin text-primary" />
         </div>
-      ) : experiences.length === 0 ? (
+      ) : isReordering ? (
+        <Card>
+          <CardHeader>
+            <CardTitle>Reorder Experiences</CardTitle>
+            <CardDescription>
+              Drag and drop to reorder experiences. Click "Save Order" when done.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <SortableList
+              items={reorderedExperience}
+              onReorder={handleReorder}
+              renderItem={(experience) => (
+                <Card>
+                  <CardHeader className="p-4">
+                    <div className="flex items-center gap-4">
+                      <div className="flex-1 min-w-0">
+                        <CardTitle className="text-base truncate">{experience.company}</CardTitle>
+                        <CardDescription className="truncate">{experience.position}</CardDescription>
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1">
+                          <Calendar className="w-3 h-3" />
+                          <span>
+                            {formatDate(experience.start_date)} - {formatDate(experience.end_date)}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2 shrink-0">
+                        {experience.is_current && (
+                          <Badge className="bg-green-500">Current</Badge>
+                        )}
+                        <Badge variant="outline">#{experience.order_index}</Badge>
+                      </div>
+                    </div>
+                  </CardHeader>
+                </Card>
+              )}
+            />
+          </CardContent>
+        </Card>
+      ) : filteredExperience.length === 0 ? (
         <Card>
           <CardContent className="py-12 text-center">
             <Briefcase className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
-            <h3 className="text-lg font-semibold mb-2">No experience entries yet</h3>
+            <h3 className="text-lg font-semibold mb-2">
+              {searchQuery ? 'No experience found' : 'No experience entries yet'}
+            </h3>
             <p className="text-muted-foreground mb-4">
-              Add your first work experience to build your timeline
+              {searchQuery
+                ? 'Try adjusting your search query'
+                : 'Add your first work experience to build your timeline'}
             </p>
-            <Button onClick={handleCreate}>
-              <Plus className="w-4 h-4 mr-2" />
-              Add Experience
-            </Button>
+            {searchQuery ? (
+              <Button onClick={() => setSearchQuery('')} variant="outline">
+                Clear Search
+              </Button>
+            ) : (
+              <Button onClick={handleCreate}>
+                <Plus className="w-4 h-4 mr-2" />
+                Add Experience
+              </Button>
+            )}
           </CardContent>
         </Card>
       ) : (
         <div className="space-y-4">
-          {experiences.map((experience) => (
+          {filteredExperience.map((experience) => (
             <Card key={experience.id}>
               <CardHeader>
                 <div className="flex items-start justify-between gap-4">

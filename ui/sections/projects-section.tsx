@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Button } from '@/ui/components/ui/button';
 import { ExternalLink, Github, ArrowRight } from 'lucide-react';
 import type { Project } from '@/domain/projects/types';
+import { ProjectSectionSkeleton } from '@/ui/components/sections/skeletons';
 
 interface ProjectsSectionProps {
   locale: string;
@@ -16,12 +17,20 @@ interface ProjectsSectionProps {
 export function ProjectsSection({ locale }: ProjectsSectionProps) {
   const t = useTranslations('projects');
   const [projects, setProjects] = useState<Project[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [selectedTech, setSelectedTech] = useState<string>('all');
 
   useEffect(() => {
     fetch(`/api/projects?locale=${locale}&featured=true`)
       .then(res => res.json())
-      .then(data => setProjects(data))
-      .catch(err => console.error('Error fetching projects:', err));
+      .then(data => {
+        setProjects(data);
+        setIsLoading(false);
+      })
+      .catch(err => {
+        console.error('Error fetching projects:', err);
+        setIsLoading(false);
+      });
   }, [locale]);
 
   const containerVariants = {
@@ -47,6 +56,17 @@ export function ProjectsSection({ locale }: ProjectsSectionProps) {
     },
   };
 
+  // Extract all unique tech stacks from projects
+  const allTechStacks = Array.from(
+    new Set(projects.flatMap(p => p.tech_stack || []))
+  ).sort();
+
+  // Filter projects based on selected tech
+  const filteredProjects = projects.filter(project => {
+    if (selectedTech === 'all') return true;
+    return project.tech_stack?.includes(selectedTech);
+  });
+
   return (
     <section id="projects" className="py-16 md:py-24 bg-muted/30">
       <div className="container mx-auto px-4">
@@ -64,15 +84,43 @@ export function ProjectsSection({ locale }: ProjectsSectionProps) {
           <div className="w-20 h-1 bg-primary mx-auto rounded-full" />
         </motion.div>
 
+        {/* Tech Stack Filter */}
+        {allTechStacks.length > 0 && (
+          <div className="flex flex-wrap gap-2 mb-8">
+            <Button
+              variant={selectedTech === 'all' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setSelectedTech('all')}
+            >
+              All Projects
+            </Button>
+            {allTechStacks.map((tech) => (
+              <Button
+                key={tech}
+                variant={selectedTech === tech ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setSelectedTech(tech)}
+              >
+                {tech}
+              </Button>
+            ))}
+          </div>
+        )}
+
         {/* Projects Grid */}
-        <motion.div
-          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-7xl mx-auto"
-          variants={containerVariants}
-          initial="hidden"
-          whileInView="visible"
-          viewport={{ once: true, margin: '-100px' }}
-        >
-          {projects.map((project, index) => (
+        {isLoading ? (
+          <div className="max-w-7xl mx-auto">
+            <ProjectSectionSkeleton />
+          </div>
+        ) : (
+          <motion.div
+            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-7xl mx-auto"
+            variants={containerVariants}
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, margin: '-100px' }}
+          >
+            {filteredProjects.map((project, index) => (
             <motion.div
               key={project.id}
               variants={itemVariants}
@@ -184,7 +232,8 @@ export function ProjectsSection({ locale }: ProjectsSectionProps) {
               </Card>
             </motion.div>
           ))}
-        </motion.div>
+          </motion.div>
+        )}
       </div>
     </section>
   );

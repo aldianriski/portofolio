@@ -8,8 +8,9 @@ import { Input } from '@/ui/components/ui/input';
 import { Label } from '@/ui/components/ui/label';
 import { Textarea } from '@/ui/components/ui/textarea';
 import { Badge } from '@/ui/components/ui/badge';
-import { Loader2, Plus, Edit, Trash2, Users2, Calendar } from 'lucide-react';
+import { Loader2, Plus, Edit, Trash2, Users2, Calendar, ArrowUpDown, Save, X } from 'lucide-react';
 import { supabase } from '@/infrastructure/supabase/client';
+import { SortableList } from '@/ui/components/admin/sortable-list';
 
 interface Organization {
   id: string;
@@ -49,6 +50,9 @@ export default function OrganizationsPage() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [formData, setFormData] = useState<OrganizationFormData>(emptyForm);
   const [isSaving, setIsSaving] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [isReordering, setIsReordering] = useState(false);
+  const [reorderedOrganizations, setReorderedOrganizations] = useState<Organization[]>([]);
 
   useEffect(() => {
     loadOrganizations();
@@ -156,6 +160,51 @@ export default function OrganizationsPage() {
     }
   };
 
+  const handleStartReorder = () => {
+    setIsReordering(true);
+    setReorderedOrganizations([...organizations]);
+  };
+
+  const handleCancelReorder = () => {
+    setIsReordering(false);
+    setReorderedOrganizations([]);
+  };
+
+  const handleReorder = (newItems: Organization[]) => {
+    setReorderedOrganizations(newItems);
+  };
+
+  const handleSaveOrder = async () => {
+    setIsSaving(true);
+    try {
+      const response = await fetch('/api/organizations/reorder', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          items: reorderedOrganizations.map((o) => ({
+            id: o.id,
+            order_index: o.order_index,
+          })),
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to save order');
+      }
+
+      toast.success('Organization order saved successfully');
+      setIsReordering(false);
+      await loadOrganizations();
+    } catch (error) {
+      console.error('Error saving order:', error);
+      toast.error('Failed to save order');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   const formatDate = (dateString: string | null) => {
     if (!dateString) return 'Present';
     return new Date(dateString).toLocaleDateString('en-US', {
@@ -163,6 +212,17 @@ export default function OrganizationsPage() {
       month: 'short',
     });
   };
+
+  // Filter and search organizations
+  const filteredOrganizations = organizations.filter(organization => {
+    // Search filter
+    const matchesSearch = searchQuery === '' ||
+      organization.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      organization.position.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (organization.description && organization.description.toLowerCase().includes(searchQuery.toLowerCase()));
+
+    return matchesSearch;
+  });
 
   return (
     <div className="space-y-6">
@@ -180,6 +240,7 @@ export default function OrganizationsPage() {
               variant={locale === 'en' ? 'default' : 'ghost'}
               size="sm"
               onClick={() => setLocale('en')}
+              disabled={isReordering}
             >
               EN
             </Button>
@@ -187,14 +248,38 @@ export default function OrganizationsPage() {
               variant={locale === 'id' ? 'default' : 'ghost'}
               size="sm"
               onClick={() => setLocale('id')}
+              disabled={isReordering}
             >
               ID
             </Button>
           </div>
-          <Button onClick={handleCreate} className="gap-2">
-            <Plus className="w-4 h-4" />
-            Add Organization
-          </Button>
+          {!isReordering ? (
+            <>
+              <Button onClick={handleStartReorder} variant="outline" className="gap-2">
+                <ArrowUpDown className="w-4 h-4" />
+                Reorder
+              </Button>
+              <Button onClick={handleCreate} className="gap-2">
+                <Plus className="w-4 h-4" />
+                Add Organization
+              </Button>
+            </>
+          ) : (
+            <>
+              <Button onClick={handleCancelReorder} variant="outline" className="gap-2">
+                <X className="w-4 h-4" />
+                Cancel
+              </Button>
+              <Button onClick={handleSaveOrder} disabled={isSaving} className="gap-2">
+                {isSaving ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Save className="w-4 h-4" />
+                )}
+                Save Order
+              </Button>
+            </>
+          )}
         </div>
       </div>
 
@@ -214,28 +299,84 @@ export default function OrganizationsPage() {
         </Card>
       </div>
 
+      {/* Search */}
+      <div className="flex-1">
+        <Input
+          placeholder="Search organizations by name, position, or description..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="w-full"
+        />
+      </div>
+
       {/* Organizations List */}
       {isLoading ? (
         <div className="flex items-center justify-center min-h-[400px]">
           <Loader2 className="w-8 h-8 animate-spin text-primary" />
         </div>
-      ) : organizations.length === 0 ? (
+      ) : isReordering ? (
+        <Card>
+          <CardHeader>
+            <CardTitle>Reorder Organizations</CardTitle>
+            <CardDescription>
+              Drag and drop to reorder organizations. Click "Save Order" when done.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <SortableList
+              items={reorderedOrganizations}
+              onReorder={handleReorder}
+              renderItem={(organization) => (
+                <Card>
+                  <CardHeader className="p-4">
+                    <div className="flex items-center gap-4">
+                      <div className="flex-1 min-w-0">
+                        <CardTitle className="text-base truncate">{organization.name}</CardTitle>
+                        <CardDescription className="truncate">{organization.position}</CardDescription>
+                        {(organization.start_date || organization.end_date) && (
+                          <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
+                            <Calendar className="w-3 h-3" />
+                            <span>
+                              {formatDate(organization.start_date)} - {formatDate(organization.end_date)}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                      <Badge variant="outline">#{organization.order_index}</Badge>
+                    </div>
+                  </CardHeader>
+                </Card>
+              )}
+            />
+          </CardContent>
+        </Card>
+      ) : filteredOrganizations.length === 0 ? (
         <Card>
           <CardContent className="py-12 text-center">
             <Users2 className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
-            <h3 className="text-lg font-semibold mb-2">No organizations yet</h3>
+            <h3 className="text-lg font-semibold mb-2">
+              {searchQuery ? 'No organizations found' : 'No organizations yet'}
+            </h3>
             <p className="text-muted-foreground mb-4">
-              Add your organization memberships and involvement
+              {searchQuery
+                ? 'Try adjusting your search'
+                : 'Add your organization memberships and involvement'}
             </p>
-            <Button onClick={handleCreate}>
-              <Plus className="w-4 h-4 mr-2" />
-              Add Organization
-            </Button>
+            {searchQuery ? (
+              <Button onClick={() => setSearchQuery('')} variant="outline">
+                Clear Search
+              </Button>
+            ) : (
+              <Button onClick={handleCreate}>
+                <Plus className="w-4 h-4 mr-2" />
+                Add Organization
+              </Button>
+            )}
           </CardContent>
         </Card>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {organizations.map((organization) => (
+          {filteredOrganizations.map((organization) => (
             <Card key={organization.id}>
               <CardHeader>
                 <div className="flex items-start justify-between gap-2">

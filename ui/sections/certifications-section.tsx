@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/ui/
 import { Button } from '@/ui/components/ui/button';
 import { Award, Calendar, ExternalLink, BadgeCheck } from 'lucide-react';
 import type { Certification } from '@/domain/certifications/types';
+import { CertificationsSectionSkeleton } from '@/ui/components/sections/skeletons';
 
 interface CertificationsSectionProps {
   locale: string;
@@ -15,12 +16,19 @@ interface CertificationsSectionProps {
 export function CertificationsSection({ locale }: CertificationsSectionProps) {
   const t = useTranslations('certifications');
   const [certifications, setCertifications] = useState<Certification[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     fetch(`/api/certifications?locale=${locale}`)
       .then(res => res.json())
-      .then(data => setCertifications(data))
-      .catch(err => console.error('Error fetching certifications:', err));
+      .then(data => {
+        setCertifications(data);
+        setIsLoading(false);
+      })
+      .catch(err => {
+        console.error('Error fetching certifications:', err);
+        setIsLoading(false);
+      });
   }, [locale]);
 
   const formatDate = (dateString: string | null) => {
@@ -79,14 +87,19 @@ export function CertificationsSection({ locale }: CertificationsSectionProps) {
         </motion.div>
 
         {/* Certifications List */}
-        <motion.div
-          className="max-w-4xl mx-auto space-y-4"
-          variants={containerVariants}
-          initial="hidden"
-          whileInView="visible"
-          viewport={{ once: true, margin: '-100px' }}
-        >
-          {certifications.map((cert) => (
+        {isLoading ? (
+          <div className="max-w-4xl mx-auto">
+            <CertificationsSectionSkeleton />
+          </div>
+        ) : (
+          <motion.div
+            className="max-w-4xl mx-auto space-y-4"
+            variants={containerVariants}
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, margin: '-100px' }}
+          >
+            {certifications.map((cert) => (
             <motion.div key={cert.id} variants={itemVariants}>
               <Card className="hover:shadow-lg transition-all duration-300 border-2 hover:border-primary/50">
                 <CardHeader>
@@ -156,7 +169,8 @@ export function CertificationsSection({ locale }: CertificationsSectionProps) {
               </Card>
             </motion.div>
           ))}
-        </motion.div>
+          </motion.div>
+        )}
       </div>
     </section>
   );

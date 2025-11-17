@@ -10,9 +10,14 @@ import { Label } from '@/ui/components/ui/label';
 import { Textarea } from '@/ui/components/ui/textarea';
 import { Switch } from '@/ui/components/ui/switch';
 import { Badge } from '@/ui/components/ui/badge';
-import { Loader2, Plus, Edit, Trash2, Image as ImageIcon, ExternalLink, Github } from 'lucide-react';
+import { Loader2, Plus, Edit, Trash2, Image as ImageIcon, ExternalLink, Github, GripVertical, ArrowUpDown, Save, X, Trash, CheckSquare, Square, Eye } from 'lucide-react';
+import { Checkbox } from '@/ui/components/ui/checkbox';
+import { AlertDialog, AlertDialogHeader, AlertDialogFooter, AlertDialogTitle, AlertDialogDescription, AlertDialogAction, AlertDialogCancel } from '@/ui/components/ui/alert-dialog';
 import { supabase } from '@/infrastructure/supabase/client';
 import { ImageUpload } from '@/ui/components/admin/image-upload';
+import { SortableList } from '@/ui/components/admin/sortable-list';
+import { ExportButton } from '@/ui/components/admin/export-button';
+import { RichTextEditor } from '@/ui/components/admin/rich-text-editor';
 
 interface Project {
   id: string;
@@ -72,6 +77,11 @@ export default function ProjectsPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterFeatured, setFilterFeatured] = useState<'all' | 'featured' | 'regular'>('all');
+  const [isReordering, setIsReordering] = useState(false);
+  const [reorderedProjects, setReorderedProjects] = useState<Project[]>([]);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [showBulkDeleteConfirm, setShowBulkDeleteConfirm] = useState(false);
+  const [previewProject, setPreviewProject] = useState<Project | null>(null);
 
   useEffect(() => {
     loadProjects();
@@ -187,6 +197,113 @@ export default function ProjectsPage() {
     }
   };
 
+  const handleSelectAll = () => {
+    if (selectedIds.length === filteredProjects.length) {
+      setSelectedIds([]);
+    } else {
+      setSelectedIds(filteredProjects.map(p => p.id));
+    }
+  };
+
+  const handleSelectOne = (id: string) => {
+    setSelectedIds(prev =>
+      prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
+    );
+  };
+
+  const handleBulkDelete = async () => {
+    setIsSaving(true);
+    try {
+      const deletePromises = selectedIds.map(id =>
+        supabase.from('projects').delete().eq('id', id)
+      );
+
+      const results = await Promise.all(deletePromises);
+      const errors = results.filter(r => r.error);
+
+      if (errors.length > 0) {
+        throw new Error(`Failed to delete ${errors.length} items`);
+      }
+
+      toast.success(`Deleted ${selectedIds.length} projects successfully`);
+      setSelectedIds([]);
+      setShowBulkDeleteConfirm(false);
+      await loadProjects();
+    } catch (error) {
+      console.error('Bulk delete error:', error);
+      toast.error('Failed to delete some projects');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handlePreview = () => {
+    // Create a preview project from current form data
+    const preview: Project = {
+      id: 'preview',
+      slug: formData.slug || 'preview-slug',
+      title: formData.title || 'Untitled Project',
+      description: formData.description || 'No description',
+      role: formData.role || 'Role',
+      tech_stack: formData.tech_stack.split(',').map(t => t.trim()).filter(t => t),
+      contributions: formData.contributions || 'No contributions listed',
+      impact: formData.impact || 'No impact listed',
+      image_url: formData.image_url || '',
+      project_url: formData.project_url || '',
+      github_url: formData.github_url || '',
+      featured: formData.featured,
+      order_index: formData.order_index,
+      locale,
+      created_at: new Date().toISOString(),
+    };
+    setPreviewProject(preview);
+  };
+
+  const handleStartReorder = () => {
+    setIsReordering(true);
+    setReorderedProjects([...projects]);
+  };
+
+  const handleCancelReorder = () => {
+    setIsReordering(false);
+    setReorderedProjects([]);
+  };
+
+  const handleReorder = (newItems: Project[]) => {
+    setReorderedProjects(newItems);
+  };
+
+  const handleSaveOrder = async () => {
+    setIsSaving(true);
+    try {
+      const response = await fetch('/api/projects/reorder', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          items: reorderedProjects.map((p) => ({
+            id: p.id,
+            order_index: p.order_index,
+          })),
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to save order');
+      }
+
+      toast.success('Project order saved successfully');
+      setIsReordering(false);
+      await loadProjects();
+    } catch (error) {
+      console.error('Error saving order:', error);
+      toast.error('Failed to save order');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   // Filter and search projects
   const filteredProjects = projects.filter(project => {
     // Search filter
@@ -220,6 +337,7 @@ export default function ProjectsPage() {
               variant={locale === 'en' ? 'default' : 'ghost'}
               size="sm"
               onClick={() => setLocale('en')}
+              disabled={isReordering}
             >
               EN
             </Button>
@@ -227,14 +345,64 @@ export default function ProjectsPage() {
               variant={locale === 'id' ? 'default' : 'ghost'}
               size="sm"
               onClick={() => setLocale('id')}
+              disabled={isReordering}
             >
               ID
             </Button>
           </div>
-          <Button onClick={handleCreate} className="gap-2">
-            <Plus className="w-4 h-4" />
-            Add Project
-          </Button>
+          {/* Bulk Actions */}
+          {selectedIds.length > 0 && !isReordering && (
+            <div className="flex items-center gap-2 px-3 py-2 bg-muted rounded-lg">
+              <span className="text-sm font-medium">{selectedIds.length} selected</span>
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={() => setShowBulkDeleteConfirm(true)}
+                className="gap-2"
+              >
+                <Trash className="w-4 h-4" />
+                Delete Selected
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setSelectedIds([])}
+              >
+                Clear
+              </Button>
+            </div>
+          )}
+          {!isReordering ? (
+            <>
+              <Button onClick={handleStartReorder} variant="outline" className="gap-2">
+                <ArrowUpDown className="w-4 h-4" />
+                Reorder
+              </Button>
+              <ExportButton
+                data={projects}
+                filename={`projects-${locale}-${new Date().toISOString().split('T')[0]}`}
+              />
+              <Button onClick={handleCreate} className="gap-2">
+                <Plus className="w-4 h-4" />
+                Add Project
+              </Button>
+            </>
+          ) : (
+            <>
+              <Button onClick={handleCancelReorder} variant="outline" className="gap-2">
+                <X className="w-4 h-4" />
+                Cancel
+              </Button>
+              <Button onClick={handleSaveOrder} disabled={isSaving} className="gap-2">
+                {isSaving ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Save className="w-4 h-4" />
+                )}
+                Save Order
+              </Button>
+            </>
+          )}
         </div>
       </div>
 
@@ -272,6 +440,19 @@ export default function ProjectsPage() {
             className="w-full"
           />
         </div>
+        {/* Select All Checkbox */}
+        {!isReordering && filteredProjects.length > 0 && (
+          <div className="flex items-center gap-2">
+            <Checkbox
+              checked={selectedIds.length === filteredProjects.length && filteredProjects.length > 0}
+              onCheckedChange={handleSelectAll}
+              id="select-all"
+            />
+            <Label htmlFor="select-all" className="text-sm cursor-pointer">
+              Select All ({filteredProjects.length})
+            </Label>
+          </div>
+        )}
         <div className="flex gap-2">
           <Button
             variant={filterFeatured === 'all' ? 'default' : 'outline'}
@@ -302,6 +483,50 @@ export default function ProjectsPage() {
         <div className="flex items-center justify-center min-h-[400px]">
           <Loader2 className="w-8 h-8 animate-spin text-primary" />
         </div>
+      ) : isReordering ? (
+        <Card>
+          <CardHeader>
+            <CardTitle>Reorder Projects</CardTitle>
+            <CardDescription>
+              Drag and drop to reorder projects. Click "Save Order" when done.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <SortableList
+              items={reorderedProjects}
+              onReorder={handleReorder}
+              renderItem={(project) => (
+                <Card>
+                  <CardHeader className="p-4">
+                    <div className="flex items-center gap-4">
+                      {project.image_url && (
+                        <div className="w-16 h-16 relative rounded overflow-hidden bg-muted shrink-0">
+                          <Image
+                            src={project.image_url}
+                            alt={project.title}
+                            fill
+                            className="object-cover"
+                            sizes="64px"
+                          />
+                        </div>
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <CardTitle className="text-base truncate">{project.title}</CardTitle>
+                        <CardDescription className="truncate">{project.role}</CardDescription>
+                      </div>
+                      <div className="flex items-center gap-2 shrink-0">
+                        {project.featured && (
+                          <Badge variant="default">Featured</Badge>
+                        )}
+                        <Badge variant="outline">#{project.order_index}</Badge>
+                      </div>
+                    </div>
+                  </CardHeader>
+                </Card>
+              )}
+            />
+          </CardContent>
+        </Card>
       ) : filteredProjects.length === 0 ? (
         <Card>
           <CardContent className="py-12 text-center">
@@ -329,7 +554,16 @@ export default function ProjectsPage() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredProjects.map((project) => (
-            <Card key={project.id} className="overflow-hidden">
+            <Card key={project.id} className="overflow-hidden relative">
+              {!isReordering && (
+                <div className="absolute top-2 left-2 z-10">
+                  <Checkbox
+                    checked={selectedIds.includes(project.id)}
+                    onCheckedChange={() => handleSelectOne(project.id)}
+                    onClick={(e) => e.stopPropagation()}
+                  />
+                </div>
+              )}
               {project.image_url && (
                 <div className="aspect-video bg-muted relative overflow-hidden">
                   <Image
@@ -484,13 +718,10 @@ export default function ProjectsPage() {
 
                 <div className="space-y-2">
                   <Label htmlFor="description">Description *</Label>
-                  <Textarea
-                    id="description"
-                    value={formData.description}
-                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                    placeholder="Project description"
-                    rows={3}
-                    required
+                  <RichTextEditor
+                    content={formData.description}
+                    onChange={(html) => setFormData({ ...formData, description: html })}
+                    placeholder="Project description with rich formatting..."
                   />
                 </div>
 
@@ -507,23 +738,19 @@ export default function ProjectsPage() {
 
                 <div className="space-y-2">
                   <Label htmlFor="contributions">Contributions</Label>
-                  <Textarea
-                    id="contributions"
-                    value={formData.contributions}
-                    onChange={(e) => setFormData({ ...formData, contributions: e.target.value })}
+                  <RichTextEditor
+                    content={formData.contributions}
+                    onChange={(html) => setFormData({ ...formData, contributions: html })}
                     placeholder="What did you contribute to this project?"
-                    rows={3}
                   />
                 </div>
 
                 <div className="space-y-2">
                   <Label htmlFor="impact">Impact</Label>
-                  <Textarea
-                    id="impact"
-                    value={formData.impact}
-                    onChange={(e) => setFormData({ ...formData, impact: e.target.value })}
+                  <RichTextEditor
+                    content={formData.impact}
+                    onChange={(html) => setFormData({ ...formData, impact: html })}
                     placeholder="What impact did this project have?"
-                    rows={3}
                   />
                 </div>
 
@@ -574,9 +801,17 @@ export default function ProjectsPage() {
                       setFormData(emptyForm);
                       setEditingId(null);
                     }}
-                    className="flex-1"
                   >
                     Cancel
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    onClick={handlePreview}
+                    className="gap-2"
+                  >
+                    <Eye className="w-4 h-4" />
+                    Preview
                   </Button>
                   <Button type="submit" disabled={isSaving} className="flex-1">
                     {isSaving ? (
@@ -594,6 +829,135 @@ export default function ProjectsPage() {
           </Card>
         </div>
       )}
+
+      {/* Preview Dialog */}
+      {previewProject && (
+        <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <Card className="w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+            <CardHeader className="border-b">
+              <div className="flex items-center justify-between">
+                <CardTitle>Project Preview</CardTitle>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setPreviewProject(null)}
+                >
+                  <X className="w-4 h-4" />
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent className="p-6">
+              {/* Preview Content */}
+              {previewProject.image_url && (
+                <div className="aspect-video bg-muted relative overflow-hidden rounded-lg mb-6">
+                  <Image
+                    src={previewProject.image_url}
+                    alt={previewProject.title}
+                    fill
+                    className="object-cover"
+                    sizes="(max-width: 1200px) 100vw, 1200px"
+                  />
+                  {previewProject.featured && (
+                    <Badge className="absolute top-4 right-4">Featured</Badge>
+                  )}
+                </div>
+              )}
+
+              <div className="space-y-6">
+                <div>
+                  <h1 className="text-3xl font-bold mb-2">{previewProject.title}</h1>
+                  <p className="text-lg text-muted-foreground">{previewProject.role}</p>
+                </div>
+
+                {previewProject.tech_stack.length > 0 && (
+                  <div>
+                    <h3 className="text-sm font-semibold mb-2">Tech Stack</h3>
+                    <div className="flex flex-wrap gap-2">
+                      {previewProject.tech_stack.map((tech, i) => (
+                        <Badge key={i} variant="secondary">{tech}</Badge>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                <div>
+                  <h3 className="text-sm font-semibold mb-2">Description</h3>
+                  <div
+                    className="prose prose-sm max-w-none"
+                    dangerouslySetInnerHTML={{ __html: previewProject.description }}
+                  />
+                </div>
+
+                {previewProject.contributions && (
+                  <div>
+                    <h3 className="text-sm font-semibold mb-2">Contributions</h3>
+                    <div
+                      className="prose prose-sm max-w-none"
+                      dangerouslySetInnerHTML={{ __html: previewProject.contributions }}
+                    />
+                  </div>
+                )}
+
+                {previewProject.impact && (
+                  <div>
+                    <h3 className="text-sm font-semibold mb-2">Impact</h3>
+                    <div
+                      className="prose prose-sm max-w-none"
+                      dangerouslySetInnerHTML={{ __html: previewProject.impact }}
+                    />
+                  </div>
+                )}
+
+                <div className="flex gap-4 pt-4">
+                  {previewProject.project_url && (
+                    <Button asChild>
+                      <a href={previewProject.project_url} target="_blank" rel="noopener noreferrer">
+                        <ExternalLink className="w-4 h-4 mr-2" />
+                        View Project
+                      </a>
+                    </Button>
+                  )}
+                  {previewProject.github_url && (
+                    <Button variant="outline" asChild>
+                      <a href={previewProject.github_url} target="_blank" rel="noopener noreferrer">
+                        <Github className="w-4 h-4 mr-2" />
+                        GitHub
+                      </a>
+                    </Button>
+                  )}
+                </div>
+              </div>
+            </CardContent>
+            <CardContent className="border-t p-4 bg-muted">
+              <Button onClick={() => setPreviewProject(null)} className="w-full">
+                Close Preview
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* Bulk Delete Confirmation */}
+      <AlertDialog open={showBulkDeleteConfirm} onOpenChange={setShowBulkDeleteConfirm}>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Delete {selectedIds.length} Projects?</AlertDialogTitle>
+          <AlertDialogDescription>
+            This action cannot be undone. This will permanently delete the selected projects.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel onClick={() => setShowBulkDeleteConfirm(false)}>
+            Cancel
+          </AlertDialogCancel>
+          <AlertDialogAction
+            onClick={handleBulkDelete}
+            disabled={isSaving}
+            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+          >
+            {isSaving ? 'Deleting...' : 'Delete'}
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialog>
     </div>
   );
 }

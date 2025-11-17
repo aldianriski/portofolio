@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "@/styles/globals.css";
+import { GoogleAnalytics } from '@/lib/analytics';
+import { AnalyticsProvider } from '@/ui/components/analytics/analytics-provider';
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -14,5 +16,16 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  return children;
+  return (
+    <html lang="en" suppressHydrationWarning>
+      <head>
+        <GoogleAnalytics />
+      </head>
+      <body>
+        <AnalyticsProvider>
+          {children}
+        </AnalyticsProvider>
+      </body>
+    </html>
+  );
 }

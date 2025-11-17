@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/ui/
 import { GraduationCap, Users2, Calendar } from 'lucide-react';
 import type { Education } from '@/domain/education/types';
 import type { Organization } from '@/domain/organizations/types';
+import { EducationSectionSkeleton } from '@/ui/components/sections/skeletons';
 
 interface EducationSectionProps {
   locale: string;
@@ -16,6 +17,7 @@ export function EducationSection({ locale }: EducationSectionProps) {
   const t = useTranslations('education');
   const [education, setEducation] = useState<Education[]>([]);
   const [organizations, setOrganizations] = useState<Organization[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     fetch(`/api/education?locale=${locale}`)
@@ -23,8 +25,12 @@ export function EducationSection({ locale }: EducationSectionProps) {
       .then(data => {
         setEducation(data.education || []);
         setOrganizations(data.organizations || []);
+        setIsLoading(false);
       })
-      .catch(err => console.error('Error fetching education/organizations:', err));
+      .catch(err => {
+        console.error('Error fetching education/organizations:', err);
+        setIsLoading(false);
+      });
   }, [locale]);
 
   const formatDateRange = (startDate: string | null, endDate: string | null) => {
@@ -84,16 +90,21 @@ export function EducationSection({ locale }: EducationSectionProps) {
           <div className="w-20 h-1 bg-primary mx-auto rounded-full" />
         </motion.div>
 
-        <div className="max-w-5xl mx-auto">
-          <motion.div
-            className="grid gap-6"
-            variants={containerVariants}
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true, margin: '-100px' }}
-          >
-            {/* Education */}
-            <div>
+        {isLoading ? (
+          <div className="max-w-5xl mx-auto">
+            <EducationSectionSkeleton />
+          </div>
+        ) : (
+          <div className="max-w-5xl mx-auto">
+            <motion.div
+              className="grid gap-6"
+              variants={containerVariants}
+              initial="hidden"
+              whileInView="visible"
+              viewport={{ once: true, margin: '-100px' }}
+            >
+              {/* Education */}
+              <div>
               <h3 className="text-2xl font-semibold mb-6 flex items-center gap-2">
                 <GraduationCap className="w-6 h-6 text-primary" />
                 Education
@@ -177,8 +188,9 @@ export function EducationSection({ locale }: EducationSectionProps) {
                 </div>
               </div>
             )}
-          </motion.div>
-        </div>
+            </motion.div>
+          </div>
+        )}
       </div>
     </section>
   );

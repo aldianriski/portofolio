@@ -9,9 +9,10 @@ import { Input } from '@/ui/components/ui/input';
 import { Label } from '@/ui/components/ui/label';
 import { Textarea } from '@/ui/components/ui/textarea';
 import { Badge } from '@/ui/components/ui/badge';
-import { Loader2, Plus, Edit, Trash2, MessageSquare, Star } from 'lucide-react';
+import { Loader2, Plus, Edit, Trash2, MessageSquare, Star, ArrowUpDown, Save, X } from 'lucide-react';
 import { supabase } from '@/infrastructure/supabase/client';
 import { ImageUpload } from '@/ui/components/admin/image-upload';
+import { SortableList } from '@/ui/components/admin/sortable-list';
 
 interface Testimonial {
   id: string;
@@ -54,6 +55,9 @@ export default function TestimonialsPage() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [formData, setFormData] = useState<TestimonialFormData>(emptyForm);
   const [isSaving, setIsSaving] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [isReordering, setIsReordering] = useState(false);
+  const [reorderedTestimonials, setReorderedTestimonials] = useState<Testimonial[]>([]);
 
   useEffect(() => {
     loadTestimonials();
@@ -163,6 +167,62 @@ export default function TestimonialsPage() {
     }
   };
 
+  const handleStartReorder = () => {
+    setIsReordering(true);
+    setReorderedTestimonials([...testimonials]);
+  };
+
+  const handleCancelReorder = () => {
+    setIsReordering(false);
+    setReorderedTestimonials([]);
+  };
+
+  const handleReorder = (newItems: Testimonial[]) => {
+    setReorderedTestimonials(newItems);
+  };
+
+  const handleSaveOrder = async () => {
+    setIsSaving(true);
+    try {
+      const response = await fetch('/api/testimonials/reorder', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          items: reorderedTestimonials.map((t) => ({
+            id: t.id,
+            order_index: t.order_index,
+          })),
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to save order');
+      }
+
+      toast.success('Testimonial order saved successfully');
+      setIsReordering(false);
+      await loadTestimonials();
+    } catch (error) {
+      console.error('Error saving order:', error);
+      toast.error('Failed to save order');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  // Filter and search testimonials
+  const filteredTestimonials = testimonials.filter(testimonial => {
+    const matchesSearch = searchQuery === '' ||
+      testimonial.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      testimonial.position?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      testimonial.company?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      testimonial.content.toLowerCase().includes(searchQuery.toLowerCase());
+
+    return matchesSearch;
+  });
+
   const renderStars = (rating: number) => {
     return (
       <div className="flex gap-0.5">
@@ -200,6 +260,7 @@ export default function TestimonialsPage() {
               variant={locale === 'en' ? 'default' : 'ghost'}
               size="sm"
               onClick={() => setLocale('en')}
+              disabled={isReordering}
             >
               EN
             </Button>
@@ -207,14 +268,38 @@ export default function TestimonialsPage() {
               variant={locale === 'id' ? 'default' : 'ghost'}
               size="sm"
               onClick={() => setLocale('id')}
+              disabled={isReordering}
             >
               ID
             </Button>
           </div>
-          <Button onClick={handleCreate} className="gap-2">
-            <Plus className="w-4 h-4" />
-            Add Testimonial
-          </Button>
+          {!isReordering ? (
+            <>
+              <Button onClick={handleStartReorder} variant="outline" className="gap-2">
+                <ArrowUpDown className="w-4 h-4" />
+                Reorder
+              </Button>
+              <Button onClick={handleCreate} className="gap-2">
+                <Plus className="w-4 h-4" />
+                Add Testimonial
+              </Button>
+            </>
+          ) : (
+            <>
+              <Button onClick={handleCancelReorder} variant="outline" className="gap-2">
+                <X className="w-4 h-4" />
+                Cancel
+              </Button>
+              <Button onClick={handleSaveOrder} disabled={isSaving} className="gap-2">
+                {isSaving ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Save className="w-4 h-4" />
+                )}
+                Save Order
+              </Button>
+            </>
+          )}
         </div>
       </div>
 
@@ -243,28 +328,98 @@ export default function TestimonialsPage() {
         </Card>
       </div>
 
+      {/* Search */}
+      <div className="flex flex-col md:flex-row gap-4">
+        <div className="flex-1">
+          <Input
+            placeholder="Search testimonials by name, position, company, or content..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full"
+          />
+        </div>
+      </div>
+
       {/* Testimonials List */}
       {isLoading ? (
         <div className="flex items-center justify-center min-h-[400px]">
           <Loader2 className="w-8 h-8 animate-spin text-primary" />
         </div>
-      ) : testimonials.length === 0 ? (
+      ) : isReordering ? (
+        <Card>
+          <CardHeader>
+            <CardTitle>Reorder Testimonials</CardTitle>
+            <CardDescription>
+              Drag and drop to reorder testimonials. Click "Save Order" when done.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <SortableList
+              items={reorderedTestimonials}
+              onReorder={handleReorder}
+              renderItem={(testimonial) => (
+                <Card>
+                  <CardHeader className="p-4">
+                    <div className="flex items-center gap-4">
+                      {testimonial.avatar_url ? (
+                        <div className="w-16 h-16 relative rounded-full overflow-hidden bg-muted shrink-0">
+                          <Image
+                            src={testimonial.avatar_url}
+                            alt={testimonial.name}
+                            fill
+                            className="object-cover"
+                            sizes="64px"
+                          />
+                        </div>
+                      ) : (
+                        <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                          <span className="text-xl font-semibold text-primary">
+                            {testimonial.name.charAt(0)}
+                          </span>
+                        </div>
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <CardTitle className="text-base truncate">{testimonial.name}</CardTitle>
+                        <CardDescription className="truncate">
+                          {testimonial.position}
+                          {testimonial.company && ` at ${testimonial.company}`}
+                        </CardDescription>
+                      </div>
+                      <Badge variant="outline">#{testimonial.order_index}</Badge>
+                    </div>
+                  </CardHeader>
+                </Card>
+              )}
+            />
+          </CardContent>
+        </Card>
+      ) : filteredTestimonials.length === 0 ? (
         <Card>
           <CardContent className="py-12 text-center">
             <MessageSquare className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
-            <h3 className="text-lg font-semibold mb-2">No testimonials yet</h3>
+            <h3 className="text-lg font-semibold mb-2">
+              {searchQuery ? 'No testimonials found' : 'No testimonials yet'}
+            </h3>
             <p className="text-muted-foreground mb-4">
-              Add your first testimonial to showcase client feedback
+              {searchQuery
+                ? 'Try adjusting your search'
+                : 'Add your first testimonial to showcase client feedback'}
             </p>
-            <Button onClick={handleCreate}>
-              <Plus className="w-4 h-4 mr-2" />
-              Add Testimonial
-            </Button>
+            {searchQuery ? (
+              <Button onClick={() => setSearchQuery('')} variant="outline">
+                Clear Search
+              </Button>
+            ) : (
+              <Button onClick={handleCreate}>
+                <Plus className="w-4 h-4 mr-2" />
+                Add Testimonial
+              </Button>
+            )}
           </CardContent>
         </Card>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {testimonials.map((testimonial) => (
+          {filteredTestimonials.map((testimonial) => (
             <Card key={testimonial.id}>
               <CardHeader>
                 <div className="flex items-start gap-4">

@@ -7,8 +7,9 @@ import { Button } from '@/ui/components/ui/button';
 import { Input } from '@/ui/components/ui/input';
 import { Label } from '@/ui/components/ui/label';
 import { Badge } from '@/ui/components/ui/badge';
-import { Loader2, Plus, Edit, Trash2, FileText, Calendar, ExternalLink, AlertCircle } from 'lucide-react';
+import { Loader2, Plus, Edit, Trash2, FileText, Calendar, ExternalLink, AlertCircle, ArrowUpDown, Save, X } from 'lucide-react';
 import { supabase } from '@/infrastructure/supabase/client';
+import { SortableList } from '@/ui/components/admin/sortable-list';
 
 interface Certification {
   id: string;
@@ -51,6 +52,9 @@ export default function CertificationsPage() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [formData, setFormData] = useState<CertificationFormData>(emptyForm);
   const [isSaving, setIsSaving] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [isReordering, setIsReordering] = useState(false);
+  const [reorderedCertifications, setReorderedCertifications] = useState<Certification[]>([]);
 
   useEffect(() => {
     loadCertifications();
@@ -160,6 +164,51 @@ export default function CertificationsPage() {
     }
   };
 
+  const handleStartReorder = () => {
+    setIsReordering(true);
+    setReorderedCertifications([...certifications]);
+  };
+
+  const handleCancelReorder = () => {
+    setIsReordering(false);
+    setReorderedCertifications([]);
+  };
+
+  const handleReorder = (newItems: Certification[]) => {
+    setReorderedCertifications(newItems);
+  };
+
+  const handleSaveOrder = async () => {
+    setIsSaving(true);
+    try {
+      const response = await fetch('/api/certifications/reorder', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          items: reorderedCertifications.map((c) => ({
+            id: c.id,
+            order_index: c.order_index,
+          })),
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to save order');
+      }
+
+      toast.success('Certification order saved successfully');
+      setIsReordering(false);
+      await loadCertifications();
+    } catch (error) {
+      console.error('Error saving order:', error);
+      toast.error('Failed to save order');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   const formatDate = (dateString: string | null) => {
     if (!dateString) return '';
     return new Date(dateString).toLocaleDateString('en-US', {
@@ -181,6 +230,16 @@ export default function CertificationsPage() {
     return expiry > new Date() && expiry < threeMonthsFromNow;
   };
 
+  // Filter certifications based on search query
+  const filteredCertifications = certifications.filter(certification => {
+    const matchesSearch = searchQuery === '' ||
+      certification.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      certification.issuer.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (certification.credential_id && certification.credential_id.toLowerCase().includes(searchQuery.toLowerCase()));
+
+    return matchesSearch;
+  });
+
   const activeCerts = certifications.filter(c => !isExpired(c.expiry_date));
   const expiredCerts = certifications.filter(c => isExpired(c.expiry_date));
   const expiringSoonCerts = certifications.filter(c => isExpiringSoon(c.expiry_date));
@@ -201,6 +260,7 @@ export default function CertificationsPage() {
               variant={locale === 'en' ? 'default' : 'ghost'}
               size="sm"
               onClick={() => setLocale('en')}
+              disabled={isReordering}
             >
               EN
             </Button>
@@ -208,14 +268,38 @@ export default function CertificationsPage() {
               variant={locale === 'id' ? 'default' : 'ghost'}
               size="sm"
               onClick={() => setLocale('id')}
+              disabled={isReordering}
             >
               ID
             </Button>
           </div>
-          <Button onClick={handleCreate} className="gap-2">
-            <Plus className="w-4 h-4" />
-            Add Certification
-          </Button>
+          {!isReordering ? (
+            <>
+              <Button onClick={handleStartReorder} variant="outline" className="gap-2">
+                <ArrowUpDown className="w-4 h-4" />
+                Reorder
+              </Button>
+              <Button onClick={handleCreate} className="gap-2">
+                <Plus className="w-4 h-4" />
+                Add Certification
+              </Button>
+            </>
+          ) : (
+            <>
+              <Button onClick={handleCancelReorder} variant="outline" className="gap-2">
+                <X className="w-4 h-4" />
+                Cancel
+              </Button>
+              <Button onClick={handleSaveOrder} disabled={isSaving} className="gap-2">
+                {isSaving ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Save className="w-4 h-4" />
+                )}
+                Save Order
+              </Button>
+            </>
+          )}
         </div>
       </div>
 
@@ -247,28 +331,86 @@ export default function CertificationsPage() {
         </Card>
       </div>
 
+      {/* Search */}
+      <div className="flex flex-col md:flex-row gap-4">
+        <div className="flex-1">
+          <Input
+            placeholder="Search certifications by name, issuer, or credential ID..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full"
+          />
+        </div>
+      </div>
+
       {/* Certifications List */}
       {isLoading ? (
         <div className="flex items-center justify-center min-h-[400px]">
           <Loader2 className="w-8 h-8 animate-spin text-primary" />
         </div>
-      ) : certifications.length === 0 ? (
+      ) : isReordering ? (
+        <Card>
+          <CardHeader>
+            <CardTitle>Reorder Certifications</CardTitle>
+            <CardDescription>
+              Drag and drop to reorder certifications. Click "Save Order" when done.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <SortableList
+              items={reorderedCertifications}
+              onReorder={handleReorder}
+              renderItem={(certification) => (
+                <Card>
+                  <CardHeader className="p-4">
+                    <div className="flex items-center gap-4">
+                      <div className="flex-1 min-w-0">
+                        <CardTitle className="text-base truncate">{certification.name}</CardTitle>
+                        <CardDescription className="truncate">{certification.issuer}</CardDescription>
+                        {certification.issue_date && (
+                          <p className="text-xs text-muted-foreground mt-1">
+                            {formatDate(certification.issue_date)}
+                            {certification.expiry_date && ` - ${formatDate(certification.expiry_date)}`}
+                          </p>
+                        )}
+                      </div>
+                      <Badge variant="outline" className="text-xs shrink-0">
+                        #{certification.order_index}
+                      </Badge>
+                    </div>
+                  </CardHeader>
+                </Card>
+              )}
+            />
+          </CardContent>
+        </Card>
+      ) : filteredCertifications.length === 0 ? (
         <Card>
           <CardContent className="py-12 text-center">
             <FileText className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
-            <h3 className="text-lg font-semibold mb-2">No certifications yet</h3>
+            <h3 className="text-lg font-semibold mb-2">
+              {searchQuery ? 'No certifications found' : 'No certifications yet'}
+            </h3>
             <p className="text-muted-foreground mb-4">
-              Add your professional certifications and credentials
+              {searchQuery
+                ? 'Try adjusting your search query'
+                : 'Add your professional certifications and credentials'}
             </p>
-            <Button onClick={handleCreate}>
-              <Plus className="w-4 h-4 mr-2" />
-              Add Certification
-            </Button>
+            {searchQuery ? (
+              <Button onClick={() => setSearchQuery('')} variant="outline">
+                Clear Search
+              </Button>
+            ) : (
+              <Button onClick={handleCreate}>
+                <Plus className="w-4 h-4 mr-2" />
+                Add Certification
+              </Button>
+            )}
           </CardContent>
         </Card>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {certifications.map((certification) => {
+          {filteredCertifications.map((certification) => {
             const expired = isExpired(certification.expiry_date);
             const expiringSoon = isExpiringSoon(certification.expiry_date);
 

@@ -6,6 +6,7 @@ import { motion } from 'framer-motion';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/ui/components/ui/card';
 import { Briefcase, MapPin, Calendar, CheckCircle2 } from 'lucide-react';
 import type { Experience } from '@/domain/experience/types';
+import { ExperienceSectionSkeleton } from '@/ui/components/sections/skeletons';
 
 interface ExperienceSectionProps {
   locale: string;
@@ -14,12 +15,19 @@ interface ExperienceSectionProps {
 export function ExperienceSection({ locale }: ExperienceSectionProps) {
   const t = useTranslations('experience');
   const [experiences, setExperiences] = useState<Experience[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     fetch(`/api/experience?locale=${locale}`)
       .then(res => res.json())
-      .then(data => setExperiences(data))
-      .catch(err => console.error('Error fetching experience:', err));
+      .then(data => {
+        setExperiences(data);
+        setIsLoading(false);
+      })
+      .catch(err => {
+        console.error('Error fetching experience:', err);
+        setIsLoading(false);
+      });
   }, [locale]);
 
   const formatDate = (dateString: string | null, isCurrent: boolean) => {
@@ -74,18 +82,23 @@ export function ExperienceSection({ locale }: ExperienceSectionProps) {
         </motion.div>
 
         {/* Timeline */}
-        <motion.div
-          className="max-w-4xl mx-auto"
-          variants={containerVariants}
-          initial="hidden"
-          whileInView="visible"
-          viewport={{ once: true, margin: '-100px' }}
-        >
-          <div className="relative">
-            {/* Timeline line */}
-            <div className="absolute left-8 md:left-1/2 top-0 bottom-0 w-0.5 bg-primary/20 -translate-x-1/2" />
+        {isLoading ? (
+          <div className="max-w-4xl mx-auto">
+            <ExperienceSectionSkeleton />
+          </div>
+        ) : (
+          <motion.div
+            className="max-w-4xl mx-auto"
+            variants={containerVariants}
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, margin: '-100px' }}
+          >
+            <div className="relative">
+              {/* Timeline line */}
+              <div className="absolute left-8 md:left-1/2 top-0 bottom-0 w-0.5 bg-primary/20 -translate-x-1/2" />
 
-            {experiences.map((exp, index) => (
+              {experiences.map((exp, index) => (
               <motion.div
                 key={exp.id}
                 variants={itemVariants}
@@ -174,8 +187,9 @@ export function ExperienceSection({ locale }: ExperienceSectionProps) {
                 </Card>
               </motion.div>
             ))}
-          </div>
-        </motion.div>
+            </div>
+          </motion.div>
+        )}
       </div>
     </section>
   );

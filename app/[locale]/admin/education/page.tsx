@@ -8,8 +8,9 @@ import { Input } from '@/ui/components/ui/input';
 import { Label } from '@/ui/components/ui/label';
 import { Textarea } from '@/ui/components/ui/textarea';
 import { Badge } from '@/ui/components/ui/badge';
-import { Loader2, Plus, Edit, Trash2, GraduationCap, Calendar } from 'lucide-react';
+import { Loader2, Plus, Edit, Trash2, GraduationCap, Calendar, ArrowUpDown, Save, X } from 'lucide-react';
 import { supabase } from '@/infrastructure/supabase/client';
+import { SortableList } from '@/ui/components/admin/sortable-list';
 
 interface Education {
   id: string;
@@ -55,6 +56,9 @@ export default function EducationPage() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [formData, setFormData] = useState<EducationFormData>(emptyForm);
   const [isSaving, setIsSaving] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [isReordering, setIsReordering] = useState(false);
+  const [reorderedEducation, setReorderedEducation] = useState<Education[]>([]);
 
   useEffect(() => {
     loadEducations();
@@ -166,6 +170,51 @@ export default function EducationPage() {
     }
   };
 
+  const handleStartReorder = () => {
+    setIsReordering(true);
+    setReorderedEducation([...educations]);
+  };
+
+  const handleCancelReorder = () => {
+    setIsReordering(false);
+    setReorderedEducation([]);
+  };
+
+  const handleReorder = (newItems: Education[]) => {
+    setReorderedEducation(newItems);
+  };
+
+  const handleSaveOrder = async () => {
+    setIsSaving(true);
+    try {
+      const response = await fetch('/api/education/reorder', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          items: reorderedEducation.map((e: Education) => ({
+            id: e.id,
+            order_index: e.order_index,
+          })),
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to save order');
+      }
+
+      toast.success('Education order saved successfully');
+      setIsReordering(false);
+      await loadEducations();
+    } catch (error) {
+      console.error('Error saving order:', error);
+      toast.error('Failed to save order');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   const formatDate = (dateString: string | null) => {
     if (!dateString) return '';
     return new Date(dateString).toLocaleDateString('en-US', {
@@ -173,6 +222,18 @@ export default function EducationPage() {
       month: 'short',
     });
   };
+
+  // Filter and search education
+  const filteredEducation = educations.filter(education => {
+    // Search filter
+    const matchesSearch = searchQuery === '' ||
+      education.institution.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      education.degree.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (education.field_of_study && education.field_of_study.toLowerCase().includes(searchQuery.toLowerCase())) ||
+      (education.description && education.description.toLowerCase().includes(searchQuery.toLowerCase()));
+
+    return matchesSearch;
+  });
 
   return (
     <div className="space-y-6">
@@ -190,6 +251,7 @@ export default function EducationPage() {
               variant={locale === 'en' ? 'default' : 'ghost'}
               size="sm"
               onClick={() => setLocale('en')}
+              disabled={isReordering}
             >
               EN
             </Button>
@@ -197,14 +259,38 @@ export default function EducationPage() {
               variant={locale === 'id' ? 'default' : 'ghost'}
               size="sm"
               onClick={() => setLocale('id')}
+              disabled={isReordering}
             >
               ID
             </Button>
           </div>
-          <Button onClick={handleCreate} className="gap-2">
-            <Plus className="w-4 h-4" />
-            Add Education
-          </Button>
+          {!isReordering ? (
+            <>
+              <Button onClick={handleStartReorder} variant="outline" className="gap-2">
+                <ArrowUpDown className="w-4 h-4" />
+                Reorder
+              </Button>
+              <Button onClick={handleCreate} className="gap-2">
+                <Plus className="w-4 h-4" />
+                Add Education
+              </Button>
+            </>
+          ) : (
+            <>
+              <Button onClick={handleCancelReorder} variant="outline" className="gap-2">
+                <X className="w-4 h-4" />
+                Cancel
+              </Button>
+              <Button onClick={handleSaveOrder} disabled={isSaving} className="gap-2">
+                {isSaving ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Save className="w-4 h-4" />
+                )}
+                Save Order
+              </Button>
+            </>
+          )}
         </div>
       </div>
 
@@ -224,28 +310,78 @@ export default function EducationPage() {
         </Card>
       </div>
 
+      {/* Search */}
+      <div className="flex flex-col md:flex-row gap-4">
+        <div className="flex-1">
+          <Input
+            placeholder="Search education by institution, degree, field of study, or description..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full"
+          />
+        </div>
+      </div>
+
       {/* Education List */}
       {isLoading ? (
         <div className="flex items-center justify-center min-h-[400px]">
           <Loader2 className="w-8 h-8 animate-spin text-primary" />
         </div>
-      ) : educations.length === 0 ? (
+      ) : isReordering ? (
+        <Card>
+          <CardHeader>
+            <CardTitle>Reorder Education</CardTitle>
+            <CardDescription>
+              Drag and drop to reorder education entries. Click "Save Order" when done.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <SortableList
+              items={reorderedEducation}
+              onReorder={handleReorder}
+              renderItem={(education) => (
+                <Card>
+                  <CardHeader className="p-4">
+                    <div className="flex items-center gap-4">
+                      <div className="flex-1 min-w-0">
+                        <CardTitle className="text-base truncate">{education.degree}</CardTitle>
+                        <CardDescription className="truncate">{education.institution}</CardDescription>
+                      </div>
+                      <Badge variant="outline">#{education.order_index}</Badge>
+                    </div>
+                  </CardHeader>
+                </Card>
+              )}
+            />
+          </CardContent>
+        </Card>
+      ) : filteredEducation.length === 0 ? (
         <Card>
           <CardContent className="py-12 text-center">
             <GraduationCap className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
-            <h3 className="text-lg font-semibold mb-2">No education entries yet</h3>
+            <h3 className="text-lg font-semibold mb-2">
+              {searchQuery ? 'No education found' : 'No education entries yet'}
+            </h3>
             <p className="text-muted-foreground mb-4">
-              Add your educational background
+              {searchQuery
+                ? 'Try adjusting your search'
+                : 'Add your educational background'}
             </p>
-            <Button onClick={handleCreate}>
-              <Plus className="w-4 h-4 mr-2" />
-              Add Education
-            </Button>
+            {searchQuery ? (
+              <Button onClick={() => setSearchQuery('')} variant="outline">
+                Clear Filters
+              </Button>
+            ) : (
+              <Button onClick={handleCreate}>
+                <Plus className="w-4 h-4 mr-2" />
+                Add Education
+              </Button>
+            )}
           </CardContent>
         </Card>
       ) : (
         <div className="space-y-4">
-          {educations.map((education) => (
+          {filteredEducation.map((education) => (
             <Card key={education.id}>
               <CardHeader>
                 <div className="flex items-start justify-between gap-4">
