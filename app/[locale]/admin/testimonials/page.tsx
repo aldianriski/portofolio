@@ -55,6 +55,7 @@ export default function TestimonialsPage() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [formData, setFormData] = useState<TestimonialFormData>(emptyForm);
   const [isSaving, setIsSaving] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
   const [isReordering, setIsReordering] = useState(false);
   const [reorderedTestimonials, setReorderedTestimonials] = useState<Testimonial[]>([]);
 
@@ -211,6 +212,17 @@ export default function TestimonialsPage() {
     }
   };
 
+  // Filter and search testimonials
+  const filteredTestimonials = testimonials.filter(testimonial => {
+    const matchesSearch = searchQuery === '' ||
+      testimonial.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      testimonial.position?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      testimonial.company?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      testimonial.content.toLowerCase().includes(searchQuery.toLowerCase());
+
+    return matchesSearch;
+  });
+
   const renderStars = (rating: number) => {
     return (
       <div className="flex gap-0.5">
@@ -316,6 +328,18 @@ export default function TestimonialsPage() {
         </Card>
       </div>
 
+      {/* Search */}
+      <div className="flex flex-col md:flex-row gap-4">
+        <div className="flex-1">
+          <Input
+            placeholder="Search testimonials by name, position, company, or content..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full"
+          />
+        </div>
+      </div>
+
       {/* Testimonials List */}
       {isLoading ? (
         <div className="flex items-center justify-center min-h-[400px]">
@@ -369,23 +393,33 @@ export default function TestimonialsPage() {
             />
           </CardContent>
         </Card>
-      ) : testimonials.length === 0 ? (
+      ) : filteredTestimonials.length === 0 ? (
         <Card>
           <CardContent className="py-12 text-center">
             <MessageSquare className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
-            <h3 className="text-lg font-semibold mb-2">No testimonials yet</h3>
+            <h3 className="text-lg font-semibold mb-2">
+              {searchQuery ? 'No testimonials found' : 'No testimonials yet'}
+            </h3>
             <p className="text-muted-foreground mb-4">
-              Add your first testimonial to showcase client feedback
+              {searchQuery
+                ? 'Try adjusting your search'
+                : 'Add your first testimonial to showcase client feedback'}
             </p>
-            <Button onClick={handleCreate}>
-              <Plus className="w-4 h-4 mr-2" />
-              Add Testimonial
-            </Button>
+            {searchQuery ? (
+              <Button onClick={() => setSearchQuery('')} variant="outline">
+                Clear Search
+              </Button>
+            ) : (
+              <Button onClick={handleCreate}>
+                <Plus className="w-4 h-4 mr-2" />
+                Add Testimonial
+              </Button>
+            )}
           </CardContent>
         </Card>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {testimonials.map((testimonial) => (
+          {filteredTestimonials.map((testimonial) => (
             <Card key={testimonial.id}>
               <CardHeader>
                 <div className="flex items-start gap-4">

@@ -57,6 +57,7 @@ export default function SkillsPage() {
   const [skills, setSkills] = useState<Skill[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [locale, setLocale] = useState<'en' | 'id'>('en');
+  const [searchQuery, setSearchQuery] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<'all' | 'hard' | 'soft'>('all');
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -211,9 +212,16 @@ export default function SkillsPage() {
     }
   };
 
-  const filteredSkills = skills.filter(skill =>
-    categoryFilter === 'all' || skill.category === categoryFilter
-  );
+  const filteredSkills = skills.filter(skill => {
+    const matchesSearch = searchQuery === '' ||
+      skill.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      skill.subcategory.toLowerCase().includes(searchQuery.toLowerCase());
+
+    const matchesCategory = categoryFilter === 'all' ||
+      skill.category === categoryFilter;
+
+    return matchesSearch && matchesCategory;
+  });
 
   const hardSkills = skills.filter(s => s.category === 'hard');
   const softSkills = skills.filter(s => s.category === 'soft');
@@ -277,6 +285,41 @@ export default function SkillsPage() {
         </div>
       </div>
 
+      {/* Search and Filter */}
+      <div className="flex flex-col md:flex-row gap-4">
+        <div className="flex-1">
+          <Input
+            placeholder="Search skills by name or subcategory..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full"
+          />
+        </div>
+        <div className="flex gap-2">
+          <Button
+            variant={categoryFilter === 'all' ? 'default' : 'outline'}
+            onClick={() => setCategoryFilter('all')}
+            size="sm"
+          >
+            All ({skills.length})
+          </Button>
+          <Button
+            variant={categoryFilter === 'hard' ? 'default' : 'outline'}
+            onClick={() => setCategoryFilter('hard')}
+            size="sm"
+          >
+            Hard Skills ({skills.filter(s => s.category === 'hard').length})
+          </Button>
+          <Button
+            variant={categoryFilter === 'soft' ? 'default' : 'outline'}
+            onClick={() => setCategoryFilter('soft')}
+            size="sm"
+          >
+            Soft Skills ({skills.filter(s => s.category === 'soft').length})
+          </Button>
+        </div>
+      </div>
+
       {/* Stats */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card>
@@ -297,32 +340,6 @@ export default function SkillsPage() {
             <p className="text-sm text-muted-foreground">Soft Skills</p>
           </CardContent>
         </Card>
-      </div>
-
-      {/* Category Filter */}
-      <div className="flex gap-2">
-        <Button
-          variant={categoryFilter === 'all' ? 'default' : 'outline'}
-          onClick={() => setCategoryFilter('all')}
-        >
-          All ({skills.length})
-        </Button>
-        <Button
-          variant={categoryFilter === 'hard' ? 'default' : 'outline'}
-          onClick={() => setCategoryFilter('hard')}
-          className="gap-2"
-        >
-          <Code className="w-4 h-4" />
-          Hard Skills ({hardSkills.length})
-        </Button>
-        <Button
-          variant={categoryFilter === 'soft' ? 'default' : 'outline'}
-          onClick={() => setCategoryFilter('soft')}
-          className="gap-2"
-        >
-          <Users className="w-4 h-4" />
-          Soft Skills ({softSkills.length})
-        </Button>
       </div>
 
       {/* Skills List */}
@@ -365,14 +382,24 @@ export default function SkillsPage() {
         <Card>
           <CardContent className="py-12 text-center">
             <Award className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
-            <h3 className="text-lg font-semibold mb-2">No skills yet</h3>
+            <h3 className="text-lg font-semibold mb-2">
+              {searchQuery || categoryFilter !== 'all' ? 'No skills found' : 'No skills yet'}
+            </h3>
             <p className="text-muted-foreground mb-4">
-              Add your first skill to showcase your expertise
+              {searchQuery || categoryFilter !== 'all'
+                ? 'Try adjusting your search or filters'
+                : 'Add your first skill'}
             </p>
-            <Button onClick={handleCreate}>
-              <Plus className="w-4 h-4 mr-2" />
-              Add Skill
-            </Button>
+            {searchQuery || categoryFilter !== 'all' ? (
+              <Button onClick={() => { setSearchQuery(''); setCategoryFilter('all'); }} variant="outline">
+                Clear Filters
+              </Button>
+            ) : (
+              <Button onClick={handleCreate}>
+                <Plus className="w-4 h-4 mr-2" />
+                Add Skill
+              </Button>
+            )}
           </CardContent>
         </Card>
       ) : (

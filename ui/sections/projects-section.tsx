@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Button } from '@/ui/components/ui/button';
 import { ExternalLink, Github, ArrowRight } from 'lucide-react';
 import type { Project } from '@/domain/projects/types';
+import { ProjectSectionSkeleton } from '@/ui/components/sections/skeletons';
 
 interface ProjectsSectionProps {
   locale: string;
@@ -16,12 +17,19 @@ interface ProjectsSectionProps {
 export function ProjectsSection({ locale }: ProjectsSectionProps) {
   const t = useTranslations('projects');
   const [projects, setProjects] = useState<Project[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     fetch(`/api/projects?locale=${locale}&featured=true`)
       .then(res => res.json())
-      .then(data => setProjects(data))
-      .catch(err => console.error('Error fetching projects:', err));
+      .then(data => {
+        setProjects(data);
+        setIsLoading(false);
+      })
+      .catch(err => {
+        console.error('Error fetching projects:', err);
+        setIsLoading(false);
+      });
   }, [locale]);
 
   const containerVariants = {
@@ -65,14 +73,19 @@ export function ProjectsSection({ locale }: ProjectsSectionProps) {
         </motion.div>
 
         {/* Projects Grid */}
-        <motion.div
-          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-7xl mx-auto"
-          variants={containerVariants}
-          initial="hidden"
-          whileInView="visible"
-          viewport={{ once: true, margin: '-100px' }}
-        >
-          {projects.map((project, index) => (
+        {isLoading ? (
+          <div className="max-w-7xl mx-auto">
+            <ProjectSectionSkeleton />
+          </div>
+        ) : (
+          <motion.div
+            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-7xl mx-auto"
+            variants={containerVariants}
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, margin: '-100px' }}
+          >
+            {projects.map((project, index) => (
             <motion.div
               key={project.id}
               variants={itemVariants}
@@ -184,7 +197,8 @@ export function ProjectsSection({ locale }: ProjectsSectionProps) {
               </Card>
             </motion.div>
           ))}
-        </motion.div>
+          </motion.div>
+        )}
       </div>
     </section>
   );

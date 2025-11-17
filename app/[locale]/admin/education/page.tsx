@@ -56,6 +56,7 @@ export default function EducationPage() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [formData, setFormData] = useState<EducationFormData>(emptyForm);
   const [isSaving, setIsSaving] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
   const [isReordering, setIsReordering] = useState(false);
   const [reorderedEducation, setReorderedEducation] = useState<Education[]>([]);
 
@@ -222,6 +223,18 @@ export default function EducationPage() {
     });
   };
 
+  // Filter and search education
+  const filteredEducation = educations.filter(education => {
+    // Search filter
+    const matchesSearch = searchQuery === '' ||
+      education.institution.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      education.degree.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (education.field_of_study && education.field_of_study.toLowerCase().includes(searchQuery.toLowerCase())) ||
+      (education.description && education.description.toLowerCase().includes(searchQuery.toLowerCase()));
+
+    return matchesSearch;
+  });
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -297,6 +310,18 @@ export default function EducationPage() {
         </Card>
       </div>
 
+      {/* Search */}
+      <div className="flex flex-col md:flex-row gap-4">
+        <div className="flex-1">
+          <Input
+            placeholder="Search education by institution, degree, field of study, or description..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full"
+          />
+        </div>
+      </div>
+
       {/* Education List */}
       {isLoading ? (
         <div className="flex items-center justify-center min-h-[400px]">
@@ -330,23 +355,33 @@ export default function EducationPage() {
             />
           </CardContent>
         </Card>
-      ) : educations.length === 0 ? (
+      ) : filteredEducation.length === 0 ? (
         <Card>
           <CardContent className="py-12 text-center">
             <GraduationCap className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
-            <h3 className="text-lg font-semibold mb-2">No education entries yet</h3>
+            <h3 className="text-lg font-semibold mb-2">
+              {searchQuery ? 'No education found' : 'No education entries yet'}
+            </h3>
             <p className="text-muted-foreground mb-4">
-              Add your educational background
+              {searchQuery
+                ? 'Try adjusting your search'
+                : 'Add your educational background'}
             </p>
-            <Button onClick={handleCreate}>
-              <Plus className="w-4 h-4 mr-2" />
-              Add Education
-            </Button>
+            {searchQuery ? (
+              <Button onClick={() => setSearchQuery('')} variant="outline">
+                Clear Filters
+              </Button>
+            ) : (
+              <Button onClick={handleCreate}>
+                <Plus className="w-4 h-4 mr-2" />
+                Add Education
+              </Button>
+            )}
           </CardContent>
         </Card>
       ) : (
         <div className="space-y-4">
-          {educations.map((education) => (
+          {filteredEducation.map((education) => (
             <Card key={education.id}>
               <CardHeader>
                 <div className="flex items-start justify-between gap-4">

@@ -52,6 +52,7 @@ export default function CertificationsPage() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [formData, setFormData] = useState<CertificationFormData>(emptyForm);
   const [isSaving, setIsSaving] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
   const [isReordering, setIsReordering] = useState(false);
   const [reorderedCertifications, setReorderedCertifications] = useState<Certification[]>([]);
 
@@ -229,6 +230,16 @@ export default function CertificationsPage() {
     return expiry > new Date() && expiry < threeMonthsFromNow;
   };
 
+  // Filter certifications based on search query
+  const filteredCertifications = certifications.filter(certification => {
+    const matchesSearch = searchQuery === '' ||
+      certification.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      certification.issuer.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (certification.credential_id && certification.credential_id.toLowerCase().includes(searchQuery.toLowerCase()));
+
+    return matchesSearch;
+  });
+
   const activeCerts = certifications.filter(c => !isExpired(c.expiry_date));
   const expiredCerts = certifications.filter(c => isExpired(c.expiry_date));
   const expiringSoonCerts = certifications.filter(c => isExpiringSoon(c.expiry_date));
@@ -320,6 +331,18 @@ export default function CertificationsPage() {
         </Card>
       </div>
 
+      {/* Search */}
+      <div className="flex flex-col md:flex-row gap-4">
+        <div className="flex-1">
+          <Input
+            placeholder="Search certifications by name, issuer, or credential ID..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full"
+          />
+        </div>
+      </div>
+
       {/* Certifications List */}
       {isLoading ? (
         <div className="flex items-center justify-center min-h-[400px]">
@@ -361,23 +384,33 @@ export default function CertificationsPage() {
             />
           </CardContent>
         </Card>
-      ) : certifications.length === 0 ? (
+      ) : filteredCertifications.length === 0 ? (
         <Card>
           <CardContent className="py-12 text-center">
             <FileText className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
-            <h3 className="text-lg font-semibold mb-2">No certifications yet</h3>
+            <h3 className="text-lg font-semibold mb-2">
+              {searchQuery ? 'No certifications found' : 'No certifications yet'}
+            </h3>
             <p className="text-muted-foreground mb-4">
-              Add your professional certifications and credentials
+              {searchQuery
+                ? 'Try adjusting your search query'
+                : 'Add your professional certifications and credentials'}
             </p>
-            <Button onClick={handleCreate}>
-              <Plus className="w-4 h-4 mr-2" />
-              Add Certification
-            </Button>
+            {searchQuery ? (
+              <Button onClick={() => setSearchQuery('')} variant="outline">
+                Clear Search
+              </Button>
+            ) : (
+              <Button onClick={handleCreate}>
+                <Plus className="w-4 h-4 mr-2" />
+                Add Certification
+              </Button>
+            )}
           </CardContent>
         </Card>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {certifications.map((certification) => {
+          {filteredCertifications.map((certification) => {
             const expired = isExpired(certification.expiry_date);
             const expiringSoon = isExpiringSoon(certification.expiry_date);
 

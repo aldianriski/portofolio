@@ -50,6 +50,7 @@ export default function OrganizationsPage() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [formData, setFormData] = useState<OrganizationFormData>(emptyForm);
   const [isSaving, setIsSaving] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
   const [isReordering, setIsReordering] = useState(false);
   const [reorderedOrganizations, setReorderedOrganizations] = useState<Organization[]>([]);
 
@@ -212,6 +213,17 @@ export default function OrganizationsPage() {
     });
   };
 
+  // Filter and search organizations
+  const filteredOrganizations = organizations.filter(organization => {
+    // Search filter
+    const matchesSearch = searchQuery === '' ||
+      organization.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      organization.position.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (organization.description && organization.description.toLowerCase().includes(searchQuery.toLowerCase()));
+
+    return matchesSearch;
+  });
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -287,6 +299,16 @@ export default function OrganizationsPage() {
         </Card>
       </div>
 
+      {/* Search */}
+      <div className="flex-1">
+        <Input
+          placeholder="Search organizations by name, position, or description..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="w-full"
+        />
+      </div>
+
       {/* Organizations List */}
       {isLoading ? (
         <div className="flex items-center justify-center min-h-[400px]">
@@ -328,23 +350,33 @@ export default function OrganizationsPage() {
             />
           </CardContent>
         </Card>
-      ) : organizations.length === 0 ? (
+      ) : filteredOrganizations.length === 0 ? (
         <Card>
           <CardContent className="py-12 text-center">
             <Users2 className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
-            <h3 className="text-lg font-semibold mb-2">No organizations yet</h3>
+            <h3 className="text-lg font-semibold mb-2">
+              {searchQuery ? 'No organizations found' : 'No organizations yet'}
+            </h3>
             <p className="text-muted-foreground mb-4">
-              Add your organization memberships and involvement
+              {searchQuery
+                ? 'Try adjusting your search'
+                : 'Add your organization memberships and involvement'}
             </p>
-            <Button onClick={handleCreate}>
-              <Plus className="w-4 h-4 mr-2" />
-              Add Organization
-            </Button>
+            {searchQuery ? (
+              <Button onClick={() => setSearchQuery('')} variant="outline">
+                Clear Search
+              </Button>
+            ) : (
+              <Button onClick={handleCreate}>
+                <Plus className="w-4 h-4 mr-2" />
+                Add Organization
+              </Button>
+            )}
           </CardContent>
         </Card>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {organizations.map((organization) => (
+          {filteredOrganizations.map((organization) => (
             <Card key={organization.id}>
               <CardHeader>
                 <div className="flex items-start justify-between gap-2">

@@ -62,6 +62,7 @@ export default function ExperiencePage() {
   const [isSaving, setIsSaving] = useState(false);
   const [isReordering, setIsReordering] = useState(false);
   const [reorderedExperience, setReorderedExperience] = useState<Experience[]>([]);
+  const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
     loadExperiences();
@@ -234,6 +235,17 @@ export default function ExperiencePage() {
     });
   };
 
+  // Filter experiences based on search query
+  const filteredExperience = experiences.filter(exp => {
+    const matchesSearch = searchQuery === '' ||
+      exp.company.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      exp.position.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (exp.description && exp.description.toLowerCase().includes(searchQuery.toLowerCase())) ||
+      (exp.location && exp.location.toLowerCase().includes(searchQuery.toLowerCase()));
+
+    return matchesSearch;
+  });
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -317,6 +329,18 @@ export default function ExperiencePage() {
         </Card>
       </div>
 
+      {/* Search */}
+      <div className="flex flex-col md:flex-row gap-4">
+        <div className="flex-1">
+          <Input
+            placeholder="Search experience by company, position, location..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full"
+          />
+        </div>
+      </div>
+
       {/* Experience List */}
       {isLoading ? (
         <div className="flex items-center justify-center min-h-[400px]">
@@ -361,23 +385,33 @@ export default function ExperiencePage() {
             />
           </CardContent>
         </Card>
-      ) : experiences.length === 0 ? (
+      ) : filteredExperience.length === 0 ? (
         <Card>
           <CardContent className="py-12 text-center">
             <Briefcase className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
-            <h3 className="text-lg font-semibold mb-2">No experience entries yet</h3>
+            <h3 className="text-lg font-semibold mb-2">
+              {searchQuery ? 'No experience found' : 'No experience entries yet'}
+            </h3>
             <p className="text-muted-foreground mb-4">
-              Add your first work experience to build your timeline
+              {searchQuery
+                ? 'Try adjusting your search query'
+                : 'Add your first work experience to build your timeline'}
             </p>
-            <Button onClick={handleCreate}>
-              <Plus className="w-4 h-4 mr-2" />
-              Add Experience
-            </Button>
+            {searchQuery ? (
+              <Button onClick={() => setSearchQuery('')} variant="outline">
+                Clear Search
+              </Button>
+            ) : (
+              <Button onClick={handleCreate}>
+                <Plus className="w-4 h-4 mr-2" />
+                Add Experience
+              </Button>
+            )}
           </CardContent>
         </Card>
       ) : (
         <div className="space-y-4">
-          {experiences.map((experience) => (
+          {filteredExperience.map((experience) => (
             <Card key={experience.id}>
               <CardHeader>
                 <div className="flex items-start justify-between gap-4">

@@ -6,6 +6,7 @@ import { motion } from 'framer-motion';
 import { Card, CardContent } from '@/ui/components/ui/card';
 import { Quote, Star } from 'lucide-react';
 import type { Testimonial } from '@/domain/testimonials/types';
+import { TestimonialsSectionSkeleton } from '@/ui/components/sections/skeletons';
 
 interface TestimonialsSectionProps {
   locale: string;
@@ -14,12 +15,19 @@ interface TestimonialsSectionProps {
 export function TestimonialsSection({ locale }: TestimonialsSectionProps) {
   const t = useTranslations('testimonials');
   const [testimonials, setTestimonials] = useState<Testimonial[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     fetch(`/api/testimonials?locale=${locale}`)
       .then(res => res.json())
-      .then(data => setTestimonials(data))
-      .catch(err => console.error('Error fetching testimonials:', err));
+      .then(data => {
+        setTestimonials(data);
+        setIsLoading(false);
+      })
+      .catch(err => {
+        console.error('Error fetching testimonials:', err);
+        setIsLoading(false);
+      });
   }, [locale]);
 
   const containerVariants = {
@@ -63,14 +71,19 @@ export function TestimonialsSection({ locale }: TestimonialsSectionProps) {
         </motion.div>
 
         {/* Testimonials Grid */}
-        <motion.div
-          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-7xl mx-auto"
-          variants={containerVariants}
-          initial="hidden"
-          whileInView="visible"
-          viewport={{ once: true, margin: '-100px' }}
-        >
-          {testimonials.map((testimonial) => (
+        {isLoading ? (
+          <div className="max-w-7xl mx-auto">
+            <TestimonialsSectionSkeleton />
+          </div>
+        ) : (
+          <motion.div
+            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-7xl mx-auto"
+            variants={containerVariants}
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, margin: '-100px' }}
+          >
+            {testimonials.map((testimonial) => (
             <motion.div
               key={testimonial.id}
               variants={itemVariants}
@@ -123,7 +136,8 @@ export function TestimonialsSection({ locale }: TestimonialsSectionProps) {
               </Card>
             </motion.div>
           ))}
-        </motion.div>
+          </motion.div>
+        )}
       </div>
     </section>
   );
