@@ -7,8 +7,9 @@ import { Button } from '@/ui/components/ui/button';
 import { Input } from '@/ui/components/ui/input';
 import { Label } from '@/ui/components/ui/label';
 import { Badge } from '@/ui/components/ui/badge';
-import { Loader2, Plus, Edit, Trash2, Award, Code, Users } from 'lucide-react';
+import { Loader2, Plus, Edit, Trash2, Award, Code, Users, ArrowUpDown, Save, X } from 'lucide-react';
 import { supabase } from '@/infrastructure/supabase/client';
+import { SortableList } from '@/ui/components/admin/sortable-list';
 
 interface Skill {
   id: string;
@@ -61,6 +62,8 @@ export default function SkillsPage() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [formData, setFormData] = useState<SkillFormData>(emptyForm);
   const [isSaving, setIsSaving] = useState(false);
+  const [isReordering, setIsReordering] = useState(false);
+  const [reorderedSkills, setReorderedSkills] = useState<Skill[]>([]);
 
   useEffect(() => {
     loadSkills();
@@ -163,6 +166,51 @@ export default function SkillsPage() {
     }
   };
 
+  const handleStartReorder = () => {
+    setIsReordering(true);
+    setReorderedSkills([...skills]);
+  };
+
+  const handleCancelReorder = () => {
+    setIsReordering(false);
+    setReorderedSkills([]);
+  };
+
+  const handleReorder = (newItems: Skill[]) => {
+    setReorderedSkills(newItems);
+  };
+
+  const handleSaveOrder = async () => {
+    setIsSaving(true);
+    try {
+      const response = await fetch('/api/skills/reorder', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          items: reorderedSkills.map((s) => ({
+            id: s.id,
+            order_index: s.order_index,
+          })),
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to save order');
+      }
+
+      toast.success('Skills order saved successfully');
+      setIsReordering(false);
+      await loadSkills();
+    } catch (error) {
+      console.error('Error saving order:', error);
+      toast.error('Failed to save order');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   const filteredSkills = skills.filter(skill =>
     categoryFilter === 'all' || skill.category === categoryFilter
   );
@@ -186,6 +234,7 @@ export default function SkillsPage() {
               variant={locale === 'en' ? 'default' : 'ghost'}
               size="sm"
               onClick={() => setLocale('en')}
+              disabled={isReordering}
             >
               EN
             </Button>
@@ -193,14 +242,38 @@ export default function SkillsPage() {
               variant={locale === 'id' ? 'default' : 'ghost'}
               size="sm"
               onClick={() => setLocale('id')}
+              disabled={isReordering}
             >
               ID
             </Button>
           </div>
-          <Button onClick={handleCreate} className="gap-2">
-            <Plus className="w-4 h-4" />
-            Add Skill
-          </Button>
+          {!isReordering ? (
+            <>
+              <Button onClick={handleStartReorder} variant="outline" className="gap-2">
+                <ArrowUpDown className="w-4 h-4" />
+                Reorder
+              </Button>
+              <Button onClick={handleCreate} className="gap-2">
+                <Plus className="w-4 h-4" />
+                Add Skill
+              </Button>
+            </>
+          ) : (
+            <>
+              <Button onClick={handleCancelReorder} variant="outline" className="gap-2">
+                <X className="w-4 h-4" />
+                Cancel
+              </Button>
+              <Button onClick={handleSaveOrder} disabled={isSaving} className="gap-2">
+                {isSaving ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Save className="w-4 h-4" />
+                )}
+                Save Order
+              </Button>
+            </>
+          )}
         </div>
       </div>
 
@@ -257,6 +330,37 @@ export default function SkillsPage() {
         <div className="flex items-center justify-center min-h-[400px]">
           <Loader2 className="w-8 h-8 animate-spin text-primary" />
         </div>
+      ) : isReordering ? (
+        <Card>
+          <CardHeader>
+            <CardTitle>Reorder Skills</CardTitle>
+            <CardDescription>
+              Drag and drop to reorder skills. Click "Save Order" when done.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <SortableList
+              items={reorderedSkills}
+              onReorder={handleReorder}
+              renderItem={(skill) => (
+                <Card>
+                  <CardHeader className="p-4">
+                    <div className="flex items-center gap-4">
+                      <div className="flex-1 min-w-0">
+                        <CardTitle className="text-base truncate">{skill.name}</CardTitle>
+                        <CardDescription className="truncate">{skill.category} - {skill.subcategory}</CardDescription>
+                      </div>
+                      <div className="flex items-center gap-2 shrink-0">
+                        <Badge variant="outline">Proficiency: {skill.proficiency}%</Badge>
+                        <Badge variant="outline">#{skill.order_index}</Badge>
+                      </div>
+                    </div>
+                  </CardHeader>
+                </Card>
+              )}
+            />
+          </CardContent>
+        </Card>
       ) : filteredSkills.length === 0 ? (
         <Card>
           <CardContent className="py-12 text-center">

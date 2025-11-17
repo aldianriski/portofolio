@@ -8,8 +8,9 @@ import { Input } from '@/ui/components/ui/input';
 import { Label } from '@/ui/components/ui/label';
 import { Textarea } from '@/ui/components/ui/textarea';
 import { Badge } from '@/ui/components/ui/badge';
-import { Loader2, Plus, Edit, Trash2, GraduationCap, Calendar } from 'lucide-react';
+import { Loader2, Plus, Edit, Trash2, GraduationCap, Calendar, ArrowUpDown, Save, X } from 'lucide-react';
 import { supabase } from '@/infrastructure/supabase/client';
+import { SortableList } from '@/ui/components/admin/sortable-list';
 
 interface Education {
   id: string;
@@ -55,6 +56,8 @@ export default function EducationPage() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [formData, setFormData] = useState<EducationFormData>(emptyForm);
   const [isSaving, setIsSaving] = useState(false);
+  const [isReordering, setIsReordering] = useState(false);
+  const [reorderedEducation, setReorderedEducation] = useState<Education[]>([]);
 
   useEffect(() => {
     loadEducations();
@@ -166,6 +169,51 @@ export default function EducationPage() {
     }
   };
 
+  const handleStartReorder = () => {
+    setIsReordering(true);
+    setReorderedEducation([...educations]);
+  };
+
+  const handleCancelReorder = () => {
+    setIsReordering(false);
+    setReorderedEducation([]);
+  };
+
+  const handleReorder = (newItems: Education[]) => {
+    setReorderedEducation(newItems);
+  };
+
+  const handleSaveOrder = async () => {
+    setIsSaving(true);
+    try {
+      const response = await fetch('/api/education/reorder', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          items: reorderedEducation.map((e: Education) => ({
+            id: e.id,
+            order_index: e.order_index,
+          })),
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to save order');
+      }
+
+      toast.success('Education order saved successfully');
+      setIsReordering(false);
+      await loadEducations();
+    } catch (error) {
+      console.error('Error saving order:', error);
+      toast.error('Failed to save order');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   const formatDate = (dateString: string | null) => {
     if (!dateString) return '';
     return new Date(dateString).toLocaleDateString('en-US', {
@@ -190,6 +238,7 @@ export default function EducationPage() {
               variant={locale === 'en' ? 'default' : 'ghost'}
               size="sm"
               onClick={() => setLocale('en')}
+              disabled={isReordering}
             >
               EN
             </Button>
@@ -197,14 +246,38 @@ export default function EducationPage() {
               variant={locale === 'id' ? 'default' : 'ghost'}
               size="sm"
               onClick={() => setLocale('id')}
+              disabled={isReordering}
             >
               ID
             </Button>
           </div>
-          <Button onClick={handleCreate} className="gap-2">
-            <Plus className="w-4 h-4" />
-            Add Education
-          </Button>
+          {!isReordering ? (
+            <>
+              <Button onClick={handleStartReorder} variant="outline" className="gap-2">
+                <ArrowUpDown className="w-4 h-4" />
+                Reorder
+              </Button>
+              <Button onClick={handleCreate} className="gap-2">
+                <Plus className="w-4 h-4" />
+                Add Education
+              </Button>
+            </>
+          ) : (
+            <>
+              <Button onClick={handleCancelReorder} variant="outline" className="gap-2">
+                <X className="w-4 h-4" />
+                Cancel
+              </Button>
+              <Button onClick={handleSaveOrder} disabled={isSaving} className="gap-2">
+                {isSaving ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Save className="w-4 h-4" />
+                )}
+                Save Order
+              </Button>
+            </>
+          )}
         </div>
       </div>
 
@@ -229,6 +302,34 @@ export default function EducationPage() {
         <div className="flex items-center justify-center min-h-[400px]">
           <Loader2 className="w-8 h-8 animate-spin text-primary" />
         </div>
+      ) : isReordering ? (
+        <Card>
+          <CardHeader>
+            <CardTitle>Reorder Education</CardTitle>
+            <CardDescription>
+              Drag and drop to reorder education entries. Click "Save Order" when done.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <SortableList
+              items={reorderedEducation}
+              onReorder={handleReorder}
+              renderItem={(education) => (
+                <Card>
+                  <CardHeader className="p-4">
+                    <div className="flex items-center gap-4">
+                      <div className="flex-1 min-w-0">
+                        <CardTitle className="text-base truncate">{education.degree}</CardTitle>
+                        <CardDescription className="truncate">{education.institution}</CardDescription>
+                      </div>
+                      <Badge variant="outline">#{education.order_index}</Badge>
+                    </div>
+                  </CardHeader>
+                </Card>
+              )}
+            />
+          </CardContent>
+        </Card>
       ) : educations.length === 0 ? (
         <Card>
           <CardContent className="py-12 text-center">

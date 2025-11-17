@@ -10,9 +10,10 @@ import { Label } from '@/ui/components/ui/label';
 import { Textarea } from '@/ui/components/ui/textarea';
 import { Switch } from '@/ui/components/ui/switch';
 import { Badge } from '@/ui/components/ui/badge';
-import { Loader2, Plus, Edit, Trash2, Image as ImageIcon, ExternalLink, Github } from 'lucide-react';
+import { Loader2, Plus, Edit, Trash2, Image as ImageIcon, ExternalLink, Github, GripVertical, ArrowUpDown, Save, X } from 'lucide-react';
 import { supabase } from '@/infrastructure/supabase/client';
 import { ImageUpload } from '@/ui/components/admin/image-upload';
+import { SortableList } from '@/ui/components/admin/sortable-list';
 
 interface Project {
   id: string;
@@ -72,6 +73,8 @@ export default function ProjectsPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterFeatured, setFilterFeatured] = useState<'all' | 'featured' | 'regular'>('all');
+  const [isReordering, setIsReordering] = useState(false);
+  const [reorderedProjects, setReorderedProjects] = useState<Project[]>([]);
 
   useEffect(() => {
     loadProjects();
@@ -187,6 +190,51 @@ export default function ProjectsPage() {
     }
   };
 
+  const handleStartReorder = () => {
+    setIsReordering(true);
+    setReorderedProjects([...projects]);
+  };
+
+  const handleCancelReorder = () => {
+    setIsReordering(false);
+    setReorderedProjects([]);
+  };
+
+  const handleReorder = (newItems: Project[]) => {
+    setReorderedProjects(newItems);
+  };
+
+  const handleSaveOrder = async () => {
+    setIsSaving(true);
+    try {
+      const response = await fetch('/api/projects/reorder', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          items: reorderedProjects.map((p) => ({
+            id: p.id,
+            order_index: p.order_index,
+          })),
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to save order');
+      }
+
+      toast.success('Project order saved successfully');
+      setIsReordering(false);
+      await loadProjects();
+    } catch (error) {
+      console.error('Error saving order:', error);
+      toast.error('Failed to save order');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   // Filter and search projects
   const filteredProjects = projects.filter(project => {
     // Search filter
@@ -220,6 +268,7 @@ export default function ProjectsPage() {
               variant={locale === 'en' ? 'default' : 'ghost'}
               size="sm"
               onClick={() => setLocale('en')}
+              disabled={isReordering}
             >
               EN
             </Button>
@@ -227,14 +276,38 @@ export default function ProjectsPage() {
               variant={locale === 'id' ? 'default' : 'ghost'}
               size="sm"
               onClick={() => setLocale('id')}
+              disabled={isReordering}
             >
               ID
             </Button>
           </div>
-          <Button onClick={handleCreate} className="gap-2">
-            <Plus className="w-4 h-4" />
-            Add Project
-          </Button>
+          {!isReordering ? (
+            <>
+              <Button onClick={handleStartReorder} variant="outline" className="gap-2">
+                <ArrowUpDown className="w-4 h-4" />
+                Reorder
+              </Button>
+              <Button onClick={handleCreate} className="gap-2">
+                <Plus className="w-4 h-4" />
+                Add Project
+              </Button>
+            </>
+          ) : (
+            <>
+              <Button onClick={handleCancelReorder} variant="outline" className="gap-2">
+                <X className="w-4 h-4" />
+                Cancel
+              </Button>
+              <Button onClick={handleSaveOrder} disabled={isSaving} className="gap-2">
+                {isSaving ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Save className="w-4 h-4" />
+                )}
+                Save Order
+              </Button>
+            </>
+          )}
         </div>
       </div>
 
@@ -302,6 +375,50 @@ export default function ProjectsPage() {
         <div className="flex items-center justify-center min-h-[400px]">
           <Loader2 className="w-8 h-8 animate-spin text-primary" />
         </div>
+      ) : isReordering ? (
+        <Card>
+          <CardHeader>
+            <CardTitle>Reorder Projects</CardTitle>
+            <CardDescription>
+              Drag and drop to reorder projects. Click "Save Order" when done.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <SortableList
+              items={reorderedProjects}
+              onReorder={handleReorder}
+              renderItem={(project) => (
+                <Card>
+                  <CardHeader className="p-4">
+                    <div className="flex items-center gap-4">
+                      {project.image_url && (
+                        <div className="w-16 h-16 relative rounded overflow-hidden bg-muted shrink-0">
+                          <Image
+                            src={project.image_url}
+                            alt={project.title}
+                            fill
+                            className="object-cover"
+                            sizes="64px"
+                          />
+                        </div>
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <CardTitle className="text-base truncate">{project.title}</CardTitle>
+                        <CardDescription className="truncate">{project.role}</CardDescription>
+                      </div>
+                      <div className="flex items-center gap-2 shrink-0">
+                        {project.featured && (
+                          <Badge variant="default">Featured</Badge>
+                        )}
+                        <Badge variant="outline">#{project.order_index}</Badge>
+                      </div>
+                    </div>
+                  </CardHeader>
+                </Card>
+              )}
+            />
+          </CardContent>
+        </Card>
       ) : filteredProjects.length === 0 ? (
         <Card>
           <CardContent className="py-12 text-center">
