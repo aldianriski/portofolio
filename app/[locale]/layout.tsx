@@ -1,16 +1,24 @@
+import type { Metadata } from 'next';
 import { NextIntlClientProvider } from 'next-intl';
 import { getMessages, setRequestLocale } from 'next-intl/server';
 import { notFound } from 'next/navigation';
 import { locales } from '@/config/i18n';
+import { getBaseMetadata } from '@/config/seo';
 import { Inter } from "next/font/google";
 import { Toaster } from '@/ui/components/ui/toaster';
 import { ThemeProvider } from '@/ui/components/providers/theme-provider';
+import { StructuredData } from '@/ui/components/seo/structured-data';
 import "@/styles/globals.css";
 
 const inter = Inter({ subsets: ["latin"] });
 
 export function generateStaticParams() {
   return locales.map((locale) => ({ locale }));
+}
+
+export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }): Promise<Metadata> {
+  const { locale } = await params;
+  return getBaseMetadata(locale);
 }
 
 export default async function LocaleLayout({
@@ -35,6 +43,9 @@ export default async function LocaleLayout({
 
   return (
     <html lang={locale} suppressHydrationWarning>
+      <head>
+        <StructuredData locale={locale} />
+      </head>
       <body className={inter.className}>
         <ThemeProvider
           attribute="class"

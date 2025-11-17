@@ -1,3 +1,4 @@
+import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { setRequestLocale } from 'next-intl/server';
 import { getTranslations } from 'next-intl/server';
@@ -6,12 +7,40 @@ import { ArrowLeft, ExternalLink, Github } from 'lucide-react';
 import { Button } from '@/ui/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/ui/components/ui/card';
 import { projectsRepository } from '@/infrastructure/supabase/repositories/projects-repository';
+import { siteConfig } from '@/config/seo';
 
 interface ProjectPageProps {
   params: Promise<{
     locale: string;
     slug: string;
   }>;
+}
+
+export async function generateMetadata({ params }: ProjectPageProps): Promise<Metadata> {
+  const { locale, slug } = await params;
+  const project = await projectsRepository.getProjectBySlug(slug, locale);
+
+  if (!project) {
+    return {
+      title: 'Project Not Found',
+    };
+  }
+
+  return {
+    title: project.title,
+    description: project.description || `${project.title} - A project by ${siteConfig.name}`,
+    openGraph: {
+      title: project.title,
+      description: project.description || `${project.title} - A project by ${siteConfig.name}`,
+      type: 'article',
+      url: `${siteConfig.url}/${locale}/projects/${slug}`,
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: project.title,
+      description: project.description || `${project.title} - A project by ${siteConfig.name}`,
+    },
+  };
 }
 
 export default async function ProjectPage({ params }: ProjectPageProps) {
