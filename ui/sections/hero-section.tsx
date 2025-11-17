@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { motion } from 'framer-motion';
+import Image from 'next/image';
 import { Button } from '@/ui/components/ui/button';
 import { ArrowRight, Mail } from 'lucide-react';
 import type { HeroSettings } from '@/domain/settings/types';
@@ -131,6 +132,21 @@ export function HeroSection({ locale }: HeroSectionProps) {
           initial="hidden"
           animate="visible"
         >
+          {/* Logo */}
+          <motion.div
+            variants={itemVariants}
+            className="flex justify-center mb-8"
+          >
+            <Image
+              src="/images/logo/non-text/Logo Aldi_1_biru-dba.png"
+              alt="Aldian Rizki Logo"
+              width={120}
+              height={120}
+              className="object-contain"
+              priority
+            />
+          </motion.div>
+
           {/* Greeting */}
           <motion.p
             variants={itemVariants}
