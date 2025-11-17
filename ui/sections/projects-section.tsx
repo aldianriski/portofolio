@@ -18,6 +18,7 @@ export function ProjectsSection({ locale }: ProjectsSectionProps) {
   const t = useTranslations('projects');
   const [projects, setProjects] = useState<Project[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [selectedTech, setSelectedTech] = useState<string>('all');
 
   useEffect(() => {
     fetch(`/api/projects?locale=${locale}&featured=true`)
@@ -55,6 +56,17 @@ export function ProjectsSection({ locale }: ProjectsSectionProps) {
     },
   };
 
+  // Extract all unique tech stacks from projects
+  const allTechStacks = Array.from(
+    new Set(projects.flatMap(p => p.tech_stack || []))
+  ).sort();
+
+  // Filter projects based on selected tech
+  const filteredProjects = projects.filter(project => {
+    if (selectedTech === 'all') return true;
+    return project.tech_stack?.includes(selectedTech);
+  });
+
   return (
     <section id="projects" className="py-16 md:py-24 bg-muted/30">
       <div className="container mx-auto px-4">
@@ -72,6 +84,29 @@ export function ProjectsSection({ locale }: ProjectsSectionProps) {
           <div className="w-20 h-1 bg-primary mx-auto rounded-full" />
         </motion.div>
 
+        {/* Tech Stack Filter */}
+        {allTechStacks.length > 0 && (
+          <div className="flex flex-wrap gap-2 mb-8">
+            <Button
+              variant={selectedTech === 'all' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setSelectedTech('all')}
+            >
+              All Projects
+            </Button>
+            {allTechStacks.map((tech) => (
+              <Button
+                key={tech}
+                variant={selectedTech === tech ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setSelectedTech(tech)}
+              >
+                {tech}
+              </Button>
+            ))}
+          </div>
+        )}
+
         {/* Projects Grid */}
         {isLoading ? (
           <div className="max-w-7xl mx-auto">
@@ -85,7 +120,7 @@ export function ProjectsSection({ locale }: ProjectsSectionProps) {
             whileInView="visible"
             viewport={{ once: true, margin: '-100px' }}
           >
-            {projects.map((project, index) => (
+            {filteredProjects.map((project, index) => (
             <motion.div
               key={project.id}
               variants={itemVariants}

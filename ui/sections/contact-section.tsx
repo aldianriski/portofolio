@@ -12,7 +12,8 @@ import { Button } from '@/ui/components/ui/button';
 import { Input } from '@/ui/components/ui/input';
 import { Label } from '@/ui/components/ui/label';
 import { Textarea } from '@/ui/components/ui/textarea';
-import { Mail, MessageSquare, Github, Linkedin, Twitter, Loader2 } from 'lucide-react';
+import { Mail, MessageSquare, Github, Linkedin, Twitter, Loader2, CheckCircle } from 'lucide-react';
+import { Dialog, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from '@/ui/components/ui/dialog';
 import type { ContactSettings, SocialSettings } from '@/domain/settings/types';
 
 interface ContactSectionProps {
@@ -33,6 +34,7 @@ export function ContactSection({ locale }: ContactSectionProps) {
   const [contactSettings, setContactSettings] = useState<ContactSettings | null>(null);
   const [socialSettings, setSocialSettings] = useState<SocialSettings | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
 
   const {
     register,
@@ -79,6 +81,7 @@ export function ContactSection({ locale }: ContactSectionProps) {
         return;
       }
 
+      setShowSuccessModal(true);
       toast.success(t('form.success'));
       reset();
     } catch (error) {
@@ -347,6 +350,29 @@ export function ContactSection({ locale }: ContactSectionProps) {
             </motion.div>
           </div>
         </div>
+
+        {/* Success Modal */}
+        <Dialog open={showSuccessModal} onOpenChange={setShowSuccessModal}>
+          <DialogClose onClick={() => setShowSuccessModal(false)} />
+          <DialogHeader>
+            <div className="flex items-center justify-center mb-4">
+              <CheckCircle className="w-16 h-16 text-green-500" />
+            </div>
+            <DialogTitle className="text-center">
+              {locale === 'en' ? 'Message Sent Successfully!' : 'Pesan Berhasil Dikirim!'}
+            </DialogTitle>
+            <DialogDescription className="text-center">
+              {locale === 'en'
+                ? "Thank you for reaching out! I'll get back to you as soon as possible."
+                : 'Terima kasih telah menghubungi! Saya akan segera merespons pesan Anda.'}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button onClick={() => setShowSuccessModal(false)} className="w-full">
+              {locale === 'en' ? 'Close' : 'Tutup'}
+            </Button>
+          </DialogFooter>
+        </Dialog>
       </div>
     </section>
   );

@@ -14,6 +14,7 @@ import { Loader2, Plus, Edit, Trash2, Image as ImageIcon, ExternalLink, Github, 
 import { supabase } from '@/infrastructure/supabase/client';
 import { ImageUpload } from '@/ui/components/admin/image-upload';
 import { SortableList } from '@/ui/components/admin/sortable-list';
+import { ExportButton } from '@/ui/components/admin/export-button';
 
 interface Project {
   id: string;
@@ -287,6 +288,10 @@ export default function ProjectsPage() {
                 <ArrowUpDown className="w-4 h-4" />
                 Reorder
               </Button>
+              <ExportButton
+                data={projects}
+                filename={`projects-${locale}-${new Date().toISOString().split('T')[0]}`}
+              />
               <Button onClick={handleCreate} className="gap-2">
                 <Plus className="w-4 h-4" />
                 Add Project
