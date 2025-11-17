@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/infrastructure/supabase/server';
 import { contactFormRateLimiter, getClientIP } from '@/lib/rate-limit';
+import { sendContactNotification, sendContactAutoReply } from '@/lib/email';
 
 // Email validation regex
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -94,6 +95,26 @@ export async function POST(request: NextRequest) {
         { status: 500 }
       );
     }
+
+    // 8. Send email notifications (non-blocking - don't wait for response)
+    sendContactNotification({
+      name: sanitizedData.name,
+      email: sanitizedData.email,
+      message: sanitizedData.message,
+      locale: sanitizedData.locale,
+      submittedAt: new Date().toLocaleString('en-US', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        timeZoneName: 'short',
+      }),
+    }).catch(err => console.error('Email notification failed:', err));
+
+    // Optional: Send auto-reply to submitter
+    // sendContactAutoReply(sanitizedData.email, sanitizedData.name)
+    //   .catch(err => console.error('Auto-reply failed:', err));
 
     return NextResponse.json({
       success: true,

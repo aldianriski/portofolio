@@ -11,6 +11,7 @@ import { Textarea } from '@/ui/components/ui/textarea';
 import { Badge } from '@/ui/components/ui/badge';
 import { Loader2, Plus, Edit, Trash2, MessageSquare, Star } from 'lucide-react';
 import { supabase } from '@/infrastructure/supabase/client';
+import { ImageUpload } from '@/ui/components/admin/image-upload';
 
 interface Testimonial {
   id: string;
@@ -388,15 +389,13 @@ export default function TestimonialsPage() {
                   />
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="avatar_url">Avatar URL</Label>
-                  <Input
-                    id="avatar_url"
-                    value={formData.avatar_url}
-                    onChange={(e) => setFormData({ ...formData, avatar_url: e.target.value })}
-                    placeholder="https://example.com/avatar.jpg"
-                  />
-                </div>
+                <ImageUpload
+                  value={formData.avatar_url}
+                  onChange={(url) => setFormData({ ...formData, avatar_url: url })}
+                  folder="testimonials"
+                  label="Avatar Image"
+                  aspectRatio="square"
+                />
 
                 <div className="space-y-2">
                   <Label htmlFor="rating">

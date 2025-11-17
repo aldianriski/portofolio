@@ -12,6 +12,7 @@ import { Switch } from '@/ui/components/ui/switch';
 import { Badge } from '@/ui/components/ui/badge';
 import { Loader2, Plus, Edit, Trash2, Image as ImageIcon, ExternalLink, Github } from 'lucide-react';
 import { supabase } from '@/infrastructure/supabase/client';
+import { ImageUpload } from '@/ui/components/admin/image-upload';
 
 interface Project {
   id: string;
@@ -526,15 +527,13 @@ export default function ProjectsPage() {
                   />
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="image_url">Image URL</Label>
-                  <Input
-                    id="image_url"
-                    value={formData.image_url}
-                    onChange={(e) => setFormData({ ...formData, image_url: e.target.value })}
-                    placeholder="https://example.com/image.jpg"
-                  />
-                </div>
+                <ImageUpload
+                  value={formData.image_url}
+                  onChange={(url) => setFormData({ ...formData, image_url: url })}
+                  folder="projects"
+                  label="Project Image"
+                  aspectRatio="video"
+                />
 
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
