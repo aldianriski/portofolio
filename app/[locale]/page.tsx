@@ -8,6 +8,7 @@ import { EducationSection } from '@/ui/sections/education-section';
 import { TestimonialsSection } from '@/ui/sections/testimonials-section';
 import { CertificationsSection } from '@/ui/sections/certifications-section';
 import { ContactSection } from '@/ui/sections/contact-section';
+import { FloatingThemeToggle } from '@/ui/components/layout/floating-theme-toggle';
 
 export default async function HomePage({
   params,
@@ -28,6 +29,7 @@ export default async function HomePage({
       <TestimonialsSection locale={locale} />
       <CertificationsSection locale={locale} />
       <ContactSection locale={locale} />
+      <FloatingThemeToggle />
     </main>
   );
 }

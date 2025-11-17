@@ -4,6 +4,7 @@ import { notFound } from 'next/navigation';
 import { locales } from '@/config/i18n';
 import { Inter } from "next/font/google";
 import { Toaster } from '@/ui/components/ui/toaster';
+import { ThemeProvider } from '@/ui/components/providers/theme-provider';
 import "@/styles/globals.css";
 
 const inter = Inter({ subsets: ["latin"] });
@@ -35,10 +36,17 @@ export default async function LocaleLayout({
   return (
     <html lang={locale} suppressHydrationWarning>
       <body className={inter.className}>
-        <NextIntlClientProvider messages={messages}>
-          {children}
-          <Toaster />
-        </NextIntlClientProvider>
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="system"
+          enableSystem
+          disableTransitionOnChange
+        >
+          <NextIntlClientProvider messages={messages}>
+            {children}
+            <Toaster />
+          </NextIntlClientProvider>
+        </ThemeProvider>
       </body>
     </html>
   );
