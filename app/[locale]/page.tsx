@@ -2,6 +2,7 @@ import { setRequestLocale } from 'next-intl/server';
 import { HeroSection } from '@/ui/sections/hero-section';
 import { ExpertiseSection } from '@/ui/sections/expertise-section';
 import { SkillsSection } from '@/ui/sections/skills-section';
+import { ProjectsSection } from '@/ui/sections/projects-section';
 
 export default async function HomePage({
   params,
@@ -16,6 +17,7 @@ export default async function HomePage({
       <HeroSection locale={locale} />
       <ExpertiseSection locale={locale} />
       <SkillsSection locale={locale} />
+      <ProjectsSection locale={locale} />
 
       {/* More sections will be added here */}
       <div className="container mx-auto px-4 py-16">
