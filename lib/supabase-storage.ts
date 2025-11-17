@@ -47,7 +47,7 @@ export async function uploadImageServer(
   const filePath = `${folder}/${fileName}`;
 
   // Upload to Supabase Storage
-  const { data, error } = await supabaseAdmin.storage
+  const { error } = await supabaseAdmin.storage
     .from(STORAGE_BUCKET)
     .upload(filePath, file, {
       cacheControl: '3600',
@@ -93,7 +93,7 @@ export async function uploadImageClient(
   const filePath = `${folder}/${fileName}`;
 
   // Upload to Supabase Storage
-  const { data, error } = await supabase.storage
+  const { error } = await supabase.storage
     .from(STORAGE_BUCKET)
     .upload(filePath, file, {
       cacheControl: '3600',

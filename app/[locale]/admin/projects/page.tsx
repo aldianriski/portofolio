@@ -1,16 +1,17 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+export const dynamic = 'force-dynamic';
+
+import { useEffect, useState, useCallback } from 'react';
 import Image from 'next/image';
 import { toast } from 'sonner';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/ui/components/ui/card';
 import { Button } from '@/ui/components/ui/button';
 import { Input } from '@/ui/components/ui/input';
 import { Label } from '@/ui/components/ui/label';
-import { Textarea } from '@/ui/components/ui/textarea';
 import { Switch } from '@/ui/components/ui/switch';
 import { Badge } from '@/ui/components/ui/badge';
-import { Loader2, Plus, Edit, Trash2, Image as ImageIcon, ExternalLink, Github, GripVertical, ArrowUpDown, Save, X, Trash, CheckSquare, Square, Eye } from 'lucide-react';
+import { Loader2, Plus, Edit, Trash2, Image as ImageIcon, ExternalLink, Github, ArrowUpDown, Save, X, Trash, Eye } from 'lucide-react';
 import { Checkbox } from '@/ui/components/ui/checkbox';
 import { AlertDialog, AlertDialogHeader, AlertDialogFooter, AlertDialogTitle, AlertDialogDescription, AlertDialogAction, AlertDialogCancel } from '@/ui/components/ui/alert-dialog';
 import { supabase } from '@/infrastructure/supabase/client';
@@ -83,11 +84,7 @@ export default function ProjectsPage() {
   const [showBulkDeleteConfirm, setShowBulkDeleteConfirm] = useState(false);
   const [previewProject, setPreviewProject] = useState<Project | null>(null);
 
-  useEffect(() => {
-    loadProjects();
-  }, [locale]);
-
-  const loadProjects = async () => {
+  const loadProjects = useCallback(async () => {
     setIsLoading(true);
     try {
       const { data, error } = await supabase
@@ -104,7 +101,11 @@ export default function ProjectsPage() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [locale]);
+
+  useEffect(() => {
+    loadProjects();
+  }, [loadProjects]);
 
   const handleEdit = (project: Project) => {
     setEditingId(project.id);
@@ -171,9 +172,9 @@ export default function ProjectsPage() {
       setFormData(emptyForm);
       setEditingId(null);
       loadProjects();
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error saving project:', error);
-      toast.error(error.message || 'Failed to save project');
+      toast.error(error instanceof Error ? error.message : 'Failed to save project');
     } finally {
       setIsSaving(false);
     }
@@ -488,7 +489,7 @@ export default function ProjectsPage() {
           <CardHeader>
             <CardTitle>Reorder Projects</CardTitle>
             <CardDescription>
-              Drag and drop to reorder projects. Click "Save Order" when done.
+              Drag and drop to reorder projects. Click &quot;Save Order&quot; when done.
             </CardDescription>
           </CardHeader>
           <CardContent>

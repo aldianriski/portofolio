@@ -1,6 +1,8 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+export const dynamic = 'force-dynamic';
+
+import { useEffect, useState, useCallback } from 'react';
 import Image from 'next/image';
 import { toast } from 'sonner';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/ui/components/ui/card';
@@ -59,11 +61,7 @@ export default function TestimonialsPage() {
   const [isReordering, setIsReordering] = useState(false);
   const [reorderedTestimonials, setReorderedTestimonials] = useState<Testimonial[]>([]);
 
-  useEffect(() => {
-    loadTestimonials();
-  }, [locale]);
-
-  const loadTestimonials = async () => {
+  const loadTestimonials = useCallback(async () => {
     setIsLoading(true);
     try {
       const { data, error } = await supabase
@@ -80,7 +78,11 @@ export default function TestimonialsPage() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [locale]);
+
+  useEffect(() => {
+    loadTestimonials();
+  }, [loadTestimonials]);
 
   const handleEdit = (testimonial: Testimonial) => {
     setEditingId(testimonial.id);
@@ -141,9 +143,9 @@ export default function TestimonialsPage() {
       setFormData(emptyForm);
       setEditingId(null);
       loadTestimonials();
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error saving testimonial:', error);
-      toast.error(error.message || 'Failed to save testimonial');
+      toast.error(error instanceof Error ? error.message : 'Failed to save testimonial');
     } finally {
       setIsSaving(false);
     }
@@ -350,7 +352,7 @@ export default function TestimonialsPage() {
           <CardHeader>
             <CardTitle>Reorder Testimonials</CardTitle>
             <CardDescription>
-              Drag and drop to reorder testimonials. Click "Save Order" when done.
+              Drag and drop to reorder testimonials. Click &quot;Save Order&quot; when done.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -459,7 +461,7 @@ export default function TestimonialsPage() {
               </CardHeader>
               <CardContent className="space-y-4">
                 <p className="text-sm text-muted-foreground italic line-clamp-4">
-                  "{testimonial.content}"
+                  &ldquo;{testimonial.content}&rdquo;
                 </p>
                 <div className="flex gap-2">
                   <Button

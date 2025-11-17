@@ -1,10 +1,7 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
 import "@/styles/globals.css";
 import { GoogleAnalytics } from '@/lib/analytics';
 import { AnalyticsProvider } from '@/ui/components/analytics/analytics-provider';
-
-const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
   title: "M. Aldian Rizki Lamani - Fullstack Developer & Tech Lead",

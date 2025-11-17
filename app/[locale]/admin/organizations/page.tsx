@@ -1,6 +1,8 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+export const dynamic = 'force-dynamic';
+
+import { useEffect, useState, useCallback } from 'react';
 import { toast } from 'sonner';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/ui/components/ui/card';
 import { Button } from '@/ui/components/ui/button';
@@ -54,11 +56,7 @@ export default function OrganizationsPage() {
   const [isReordering, setIsReordering] = useState(false);
   const [reorderedOrganizations, setReorderedOrganizations] = useState<Organization[]>([]);
 
-  useEffect(() => {
-    loadOrganizations();
-  }, [locale]);
-
-  const loadOrganizations = async () => {
+  const loadOrganizations = useCallback(async () => {
     setIsLoading(true);
     try {
       const { data, error } = await supabase
@@ -75,7 +73,11 @@ export default function OrganizationsPage() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [locale]);
+
+  useEffect(() => {
+    loadOrganizations();
+  }, [loadOrganizations]);
 
   const handleEdit = (organization: Organization) => {
     setEditingId(organization.id);
@@ -134,9 +136,9 @@ export default function OrganizationsPage() {
       setFormData(emptyForm);
       setEditingId(null);
       loadOrganizations();
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error saving organization:', error);
-      toast.error(error.message || 'Failed to save organization');
+      toast.error(error instanceof Error ? error.message : 'Failed to save organization');
     } finally {
       setIsSaving(false);
     }
@@ -319,7 +321,7 @@ export default function OrganizationsPage() {
           <CardHeader>
             <CardTitle>Reorder Organizations</CardTitle>
             <CardDescription>
-              Drag and drop to reorder organizations. Click "Save Order" when done.
+              Drag and drop to reorder organizations. Click &quot;Save Order&quot; when done.
             </CardDescription>
           </CardHeader>
           <CardContent>

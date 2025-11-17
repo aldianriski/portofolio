@@ -16,9 +16,9 @@ export function usePageViews() {
 
     const url = pathname + (searchParams?.toString() ? `?${searchParams.toString()}` : '');
 
-    // @ts-ignore
+    // @ts-expect-error - gtag is added by Google Analytics script
     if (typeof window.gtag !== 'undefined') {
-      // @ts-ignore
+      // @ts-expect-error - gtag is added by Google Analytics script
       window.gtag('config', GA_MEASUREMENT_ID, {
         page_path: url,
       });
@@ -60,9 +60,9 @@ export function GoogleAnalytics() {
 export function trackEvent(action: string, category: string, label?: string, value?: number) {
   if (!GA_MEASUREMENT_ID) return;
 
-  // @ts-ignore
+  // @ts-expect-error - gtag is added by Google Analytics script
   if (typeof window.gtag !== 'undefined') {
-    // @ts-ignore
+    // @ts-expect-error - gtag is added by Google Analytics script
     window.gtag('event', action, {
       event_category: category,
       event_label: label,

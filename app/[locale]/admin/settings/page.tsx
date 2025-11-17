@@ -1,6 +1,8 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+export const dynamic = 'force-dynamic';
+
+import { useEffect, useState, useCallback } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -43,11 +45,7 @@ export default function SettingsPage() {
     resolver: zodResolver(settingsSchema),
   });
 
-  useEffect(() => {
-    loadSettings();
-  }, []);
-
-  const loadSettings = async () => {
+  const loadSettings = useCallback(async () => {
     setIsLoading(true);
     try {
       const { data, error } = await supabase
@@ -67,7 +65,7 @@ export default function SettingsPage() {
         contact_email: settingsMap.get('contact_email') || '',
         contact_phone: settingsMap.get('contact_phone') || '',
         contact_whatsapp: settingsMap.get('contact_whatsapp') || '',
-        working_status: (settingsMap.get('working_status') || 'available') as any,
+        working_status: (settingsMap.get('working_status') || 'available') as 'available' | 'busy' | 'unavailable',
         github_url: settingsMap.get('github_url') || '',
         linkedin_url: settingsMap.get('linkedin_url') || '',
         twitter_url: settingsMap.get('twitter_url') || '',
@@ -78,7 +76,11 @@ export default function SettingsPage() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [locale, reset]);
+
+  useEffect(() => {
+    loadSettings();
+  }, [loadSettings]);
 
   const onSubmit = async (data: SettingsFormData) => {
     setIsSaving(true);

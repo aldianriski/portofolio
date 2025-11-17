@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/infrastructure/supabase/server';
 import { contactFormRateLimiter, getClientIP } from '@/lib/rate-limit';
-import { sendContactNotification, sendContactAutoReply } from '@/lib/email';
+import { sendContactNotification } from '@/lib/email';
 
 // Email validation regex
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;

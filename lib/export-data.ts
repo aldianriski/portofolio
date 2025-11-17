@@ -2,7 +2,7 @@
  * Export data utilities for admin panel
  */
 
-export function exportToCSV(data: any[], filename: string) {
+export function exportToCSV(data: Record<string, unknown>[], filename: string) {
   if (!data || data.length === 0) {
     console.error('No data to export');
     return;
@@ -47,7 +47,7 @@ export function exportToCSV(data: any[], filename: string) {
   downloadBlob(blob, `${filename}.csv`);
 }
 
-export function exportToJSON(data: any[], filename: string) {
+export function exportToJSON(data: Record<string, unknown>[], filename: string) {
   if (!data || data.length === 0) {
     console.error('No data to export');
     return;
@@ -72,7 +72,7 @@ function downloadBlob(blob: Blob, filename: string) {
 /**
  * Import CSV data
  */
-export function importFromCSV(file: File): Promise<any[]> {
+export function importFromCSV(file: File): Promise<Record<string, unknown>[]> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
 
@@ -92,7 +92,7 @@ export function importFromCSV(file: File): Promise<any[]> {
         // Parse data rows
         const data = lines.slice(1).map(line => {
           const values = parseCSVLine(line);
-          const obj: any = {};
+          const obj: Record<string, unknown> = {};
 
           headers.forEach((header, index) => {
             let value = values[index] || '';
@@ -101,7 +101,7 @@ export function importFromCSV(file: File): Promise<any[]> {
             if (value.startsWith('{') || value.startsWith('[')) {
               try {
                 value = JSON.parse(value);
-              } catch (e) {
+              } catch {
                 // Keep as string if not valid JSON
               }
             }
@@ -126,7 +126,7 @@ export function importFromCSV(file: File): Promise<any[]> {
 /**
  * Import JSON data
  */
-export function importFromJSON(file: File): Promise<any[]> {
+export function importFromJSON(file: File): Promise<Record<string, unknown>[]> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
 

@@ -1,13 +1,15 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+export const dynamic = 'force-dynamic';
+
+import { useEffect, useState, useCallback } from 'react';
 import { toast } from 'sonner';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/ui/components/ui/card';
 import { Button } from '@/ui/components/ui/button';
 import { Input } from '@/ui/components/ui/input';
 import { Label } from '@/ui/components/ui/label';
 import { Badge } from '@/ui/components/ui/badge';
-import { Loader2, Plus, Edit, Trash2, Award, Code, Users, ArrowUpDown, Save, X } from 'lucide-react';
+import { Loader2, Plus, Edit, Trash2, Award, ArrowUpDown, Save, X } from 'lucide-react';
 import { supabase } from '@/infrastructure/supabase/client';
 import { SortableList } from '@/ui/components/admin/sortable-list';
 
@@ -66,11 +68,7 @@ export default function SkillsPage() {
   const [isReordering, setIsReordering] = useState(false);
   const [reorderedSkills, setReorderedSkills] = useState<Skill[]>([]);
 
-  useEffect(() => {
-    loadSkills();
-  }, [locale]);
-
-  const loadSkills = async () => {
+  const loadSkills = useCallback(async () => {
     setIsLoading(true);
     try {
       const { data, error } = await supabase
@@ -87,7 +85,11 @@ export default function SkillsPage() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [locale]);
+
+  useEffect(() => {
+    loadSkills();
+  }, [loadSkills]);
 
   const handleEdit = (skill: Skill) => {
     setEditingId(skill.id);
@@ -141,9 +143,9 @@ export default function SkillsPage() {
       setFormData(emptyForm);
       setEditingId(null);
       loadSkills();
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error saving skill:', error);
-      toast.error(error.message || 'Failed to save skill');
+      toast.error(error instanceof Error ? error.message : 'Failed to save skill');
     } finally {
       setIsSaving(false);
     }
@@ -352,7 +354,7 @@ export default function SkillsPage() {
           <CardHeader>
             <CardTitle>Reorder Skills</CardTitle>
             <CardDescription>
-              Drag and drop to reorder skills. Click "Save Order" when done.
+              Drag and drop to reorder skills. Click &quot;Save Order&quot; when done.
             </CardDescription>
           </CardHeader>
           <CardContent>

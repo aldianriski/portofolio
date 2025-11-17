@@ -27,7 +27,7 @@ export default function Error({
           </div>
           <CardTitle className="text-2xl">Something Went Wrong</CardTitle>
           <CardDescription>
-            We encountered an unexpected error. This has been logged and we'll look into it.
+            We encountered an unexpected error. This has been logged and we&apos;ll look into it.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">

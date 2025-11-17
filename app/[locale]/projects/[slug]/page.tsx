@@ -1,7 +1,6 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { setRequestLocale } from 'next-intl/server';
-import { getTranslations } from 'next-intl/server';
 import Link from 'next/link';
 import { ArrowLeft, ExternalLink, Github } from 'lucide-react';
 import { Button } from '@/ui/components/ui/button';
@@ -48,7 +47,6 @@ export default async function ProjectPage({ params }: ProjectPageProps) {
   setRequestLocale(locale);
 
   const project = await projectsRepository.getProjectBySlug(slug, locale);
-  const t = await getTranslations('projects');
 
   if (!project) {
     notFound();
